@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Mandi Map{% endblock %}
+
+{% block content %}
+<div style="max-width:2000px; margin-top:30px; position:relative;">
+
+    <!-- Search Section -->
+    <div style="width:550px; margin-bottom:20px; position:relative;">
+
+        <!-- Search Box (Left) -->
+        <div style="flex:1;">
+            <label for="mandiSearch" style="font-weight:500; color:#7c7ca5; font-size:16px;">Search Mandi:</label>
+            <input type="text" id="mandiSearch" placeholder="Start typing mandi name..." 
+                style="width:100%; padding:15px; border-radius:8px; border:1px solid #dcd6f0; font-size:16px;" autocomplete="off">
+        </div>
+
+        <!-- Suggestions (Right) -->
+        <div id="mandiSuggestions" 
+            style="position:absolute; left:100%; top:0; width:250px; max-height:600px; 
+                    overflow-y:auto; background:#e1f5fe; color:#3a3a55; 
+                    border:1px solid #dcd6f0; border-radius:6px; display:none; z-index:1000;">
+        </div>
+
+    </div>
+
+
+    <!-- Mandi Info -->
+    <div id="mandiInfo" style="
+            margin-top:30px;
+            width:850px;
+            display:none;
+            line-height:1.6;
+            background:#f8fdff;
+            padding:25px;
+            border-radius:12px;
+            border:1px solid #e1f5fe;
+        ">
+        <div style="font-size:40px; font-weight:600; color:#7c7ca5; margin-bottom:15px;">
+            <span id="selectedMandiName"></span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+            <div style="font-size:22px; color:#7c7ca5;">
+                <strong>Type:</strong> <span id="mandiType"></span>
+            </div>
+            <div style="font-size:22px; color:#7c7ca5;">
+                <strong>District:</strong> <span id="mandiDistrict"></span>
+            </div>
+            <div style="font-size:22px; color:#7c7ca5;">
+                <strong>State:</strong> <span id="mandiState"></span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Map Section -->
+    <div id="mandiMap" 
+         style="height:400px; width:950px; border-radius:2%; border:2px solid #d1c4e9; display:none;
+                position:absolute; top:0; right:0; z-index:100;">
+    </div>
+
+</div>
+
+<!-- Leaflet JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+// Elements
+const mapDiv = document.getElementById('mandiMap');
+const mandiInfoDiv = document.getElementById('mandiInfo');
+const mandiTypeSpan = document.getElementById('mandiType');
+const mandiDistrictSpan = document.getElementById('mandiDistrict');
+const mandiStateSpan = document.getElementById('mandiState');
+const selectedMandiNameSpan = document.getElementById('selectedMandiName');
+const mandiInput = document.getElementById('mandiSearch');
+
+// Create suggestions container dynamically
+let mandiSuggestions = document.getElementById('mandiSuggestions');
+if(!mandiSuggestions){
+    mandiSuggestions = document.createElement('div');
+    mandiSuggestions.id = 'mandiSuggestions';
+    mandiSuggestions.style.cssText = `
+        position:absolute;
+        left:100%;  /* show on right side */
+        top:0;
+        width:250px;
+        max-height:400px;       /* limit height */
+        overflow-y:auto;        /* enable vertical scroll */
+        background:#e1f5fe;
+        color:#3a3a55;
+        border:1px solid #dcd6f0;
+        border-radius:6px;
+        display:none;
+        z-index:1000;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* optional shadow for clarity */
+    `;
+    mandiInput.parentNode.style.position = 'relative'; // Ensure parent is relative
+    mandiInput.parentNode.appendChild(mandiSuggestions);
+}
+
+// Build a JS array of mandis from Django template
+const allMandis = [
+    {% for m in mandis %}
+    {
+        name: "{{ m.mandi_name }}",
+        type: "{{ m.mandi_type }}",
+        lat: {{ m.latitude }},
+        lng: {{ m.longitude }},
+        district: "{% if m.district %}{{ m.district.district_name }}{% else %}N/A{% endif %}",
+        state: "{% if m.district and m.district.state %}{{ m.district.state.state_name }}{% else %}N/A{% endif %}"
+    },
+    {% endfor %}
+];
+
+// Initialize map variables
+let map, marker;
+
+// Function to show mandi on map
+function showMandiOnMap(mandi) {
+    const lat = parseFloat(mandi.lat);
+    const lng = parseFloat(mandi.lng);
+
+    // Initialize map if not exists
+    if(!map){
+        mapDiv.style.display = 'block';
+        map = L.map('mandiMap', { zoomControl: false, attributionControl: false }).setView([lat, lng], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+    }
+
+    // Update marker
+    if(marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng], {
+        icon: L.icon({
+            iconUrl: "{% static 'images/mandi_icon.png' %}",
+            iconSize: [30,30]
+        })
+    }).addTo(map);
+    map.setView([lat,lng], 12);
+
+    // Show mandi info
+    selectedMandiNameSpan.textContent = mandi.name;
+    mandiTypeSpan.textContent = mandi.type || "N/A";
+    mandiDistrictSpan.textContent = mandi.district || "N/A";
+    mandiStateSpan.textContent = mandi.state || "N/A";
+    mandiInfoDiv.style.display = 'block';
+}
+
+// Show suggestions while typing
+mandiInput.addEventListener('input', function() {
+    const query = this.value.toLowerCase().trim();
+    mandiSuggestions.innerHTML = '';
+
+    if(!query){
+        mandiSuggestions.style.display = 'none';
+        return;
+    }
+
+    // Filter mandis starting with query, limit 10
+    const filteredMandis = allMandis
+        .filter(m => m.name.toLowerCase().startsWith(query))
+        .sort((a,b) => a.name.localeCompare(b.name))
+        .slice(0,10);
+
+    if(filteredMandis.length === 0){
+        mandiSuggestions.style.display = 'none';
+        return;
+    }
+
+    filteredMandis.forEach(m => {
+        const div = document.createElement('div');
+        div.textContent = m.name;
+        div.style.padding = '10px';
+        div.style.cursor = 'pointer';
+        div.style.borderBottom = '1px solid #f0f0f0';
+        div.addEventListener('click', () => {
+            mandiInput.value = m.name;
+            mandiSuggestions.style.display = 'none';
+            showMandiOnMap(m);
+        });
+        mandiSuggestions.appendChild(div);
+    });
+
+    mandiSuggestions.style.display = 'block';
+});
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e){
+    if(!mandiInput.contains(e.target) && !mandiSuggestions.contains(e.target)){
+        mandiSuggestions.style.display = 'none';
+    }
+});
+
+// Handle Enter key
+mandiInput.addEventListener('keypress', function(e){
+    if(e.key === 'Enter'){
+        e.preventDefault();
+        const selected = allMandis.find(m => m.name.toLowerCase() === mandiInput.value.toLowerCase());
+        if(selected) showMandiOnMap(selected);
+        mandiSuggestions.style.display = 'none';
+    }
+});
+</script>
+
+{% endblock %}

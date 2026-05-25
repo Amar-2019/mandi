@@ -1,0 +1,52 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: hi\n"
+
+#: home/templates/home/index.html:6
+msgid "Multilingual Site"
+msgstr "बहुभाषी साइट"
+
+#: home/views.py:6
+msgid "Hello, welcome to my multilingual site!"
+msgstr "नमस्ते, मेरी बहुभाषी साइट पर आपका स्वागत है!"
+
+#: home/views.py:7
+msgid "Choose your language"
+msgstr "अपनी भाषा चुनें"
+
+#: home/templates/home/index.html:18
+msgid "Switch"
+msgstr "बदलें"
+
+#: home/templates/home/index.html:24
+msgid "About this website"
+msgstr "इस वेबसाइट के बारे में"
+
+#: home/templates/home/index.html:25
+msgid "This is a demo project to show how Django can support multiple languages like English, Hindi, and Punjabi."
+msgstr "यह एक डेमो प्रोजेक्ट है जो दिखाता है कि Django कैसे अंग्रेज़ी, हिंदी और पंजाबी जैसी कई भाषाओं का समर्थन कर सकता है।"
+
+#: home/templates/home/index.html:28
+msgid "Features"
+msgstr "विशेषताएँ"
+
+#: home/templates/home/index.html:30
+msgid "Language switcher with dropdown"
+msgstr "ड्रॉपडाउन के साथ भाषा बदलने का विकल्प"
+
+#: home/templates/home/index.html:31
+msgid "Dynamic translations in templates and views"
+msgstr "टेम्पलेट्स और व्यूज़ में डायनेमिक अनुवाद"
+
+#: home/templates/home/index.html:32
+msgid "Easy to add new languages"
+msgstr "नई भाषाएँ जोड़ना आसान"
+
+#: home/templates/home/index.html:35
+msgid "Contact"
+msgstr "संपर्क"
+
+#: home/templates/home/index.html:36
+msgid "If you have any questions, feel free to contact the admin team."
+msgstr "यदि आपके कोई प्रश्न हैं, तो बेझिझक व्यवस्थापक टीम से संपर्क करें।"

@@ -1,0 +1,183 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}India Village-Mandi Routing{% endblock %}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9f9fc;
+      display: flex;
+      color: #2c3e50;
+    }
+
+    /* Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: linear-gradient(90deg, #a18cd1, #fbc2eb);
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 1000;
+    }
+
+    header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    header .logo-container {
+      display: flex;
+      align-items: center;
+    }
+
+    header img {
+      border-radius: 50%;
+    }
+
+    /* Language switcher */
+    .language-switcher form {
+      display: flex;
+      align-items: center;
+    }
+
+    .language-switcher select {
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: none;
+      margin-right: 8px;
+      font-size: 14px;
+    }
+
+    .language-switcher input[type="submit"] {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: none;
+      background: #ffffff;
+      color: #4527a0;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .language-switcher input[type="submit"]:hover {
+      background: #f0e6fa;
+    }
+
+    /* Sidebar */
+    aside {
+      position: fixed;
+      top: 70px;
+      left: 0;
+      width: 240px;
+      height: 100%;
+      background: #e9e4f0;
+      padding-top: 20px;
+      border-right: 1px solid #dcd6f0;
+      box-shadow: 2px 0 6px rgba(0,0,0,0.05);
+    }
+
+    aside ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    aside li {
+      margin: 10px 0;
+    }
+
+    aside a {
+      display: flex;
+      align-items: center;
+      padding: 14px 22px;
+      color: #3a3a55;
+      text-decoration: none;
+      font-size: 18px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      border-radius: 8px;
+    }
+
+    aside a:hover {
+      background: #d1c4e9;
+      color: #4527a0;
+      transform: scale(1.05);
+    }
+
+    aside a img {
+      width: 26px;
+      height: 26px;
+      margin-right: 12px;
+    }
+
+    /* Main Content */
+    main {
+      margin-top: 70px;
+      margin-left: 240px;
+      padding: 25px;
+      flex: 1;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo-container">
+      <a href="/dashboard">
+        <img src="{% static 'images/user-icon.png' %}" alt="User" style="width: 40px; height: 40px; margin-right: 12px;">
+      </a>
+      <h1>INDIA VILLAGE-MANDI ROUTING</h1>
+    </div>
+
+    <!-- Language Switcher -->
+    <div class="language-switcher">
+      <form action="/i18n/setlang/" method="post">
+        {% csrf_token %}
+        {% get_current_language as LANGUAGE_CODE %}
+        {% get_available_languages as LANGUAGES %}
+        <select name="language">
+          {% for lang, name in LANGUAGES %}
+            <option value="{{ lang }}"{% if lang == LANGUAGE_CODE %} selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+        <input type="submit" value="{% trans 'Switch' %}">
+      </form>
+    </div>
+
+    <img src="{% static 'images/person.jpeg' %}" alt="Flag" style="width: 50px; height: 50px;">
+  </header>
+
+  <!-- Sidebar -->
+  <aside>
+    <ul>
+      <li><a href="/dashboard"><img src="{% static 'images/homw.png' %}" alt="">{% trans "Home" %}</a></li>
+      <li><a href="/villages_list"><img src="{% static 'images/village.png' %}" alt="">{% trans "Village" %}</a></li>
+      <li><a href="/mandi_list"><img src="{% static 'images/mandi.png' %}" alt="">{% trans "Mandi" %}</a></li>
+      <li><a href="/product"><img src="{% static 'images/product.png' %}" alt="">{% trans "Product" %}</a></li>
+      <li><a href="/vehicle"><img src="{% static 'images/truck.png' %}" alt="">{% trans "Vehicle" %}</a></li>
+
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main>
+    {% block content %}
+    {% endblock %}
+  </main>
+</body>
+</html>

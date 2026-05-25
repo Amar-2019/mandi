@@ -1,0 +1,702 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Village Map{% endblock %}
+
+{% block content %}
+<div style="max-width: 2000px; margin-top: 20px; position: relative;">
+
+    <!-- Search Section -->
+    <div style="width: 550px; margin-bottom: 20px;">
+        <label for="villageSearch" style="font-weight: 500; color: #7c7ca5; font-size: 16px; display: block; margin-bottom: 8px;">
+            Search Village:
+        </label>
+        <input type="text" id="villageSearch" placeholder="Start typing village name..." 
+               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #dcd6f0; font-size: 16px;" list="villagesList">
+        <datalist id="villagesList">
+            {% for v in villages %}
+            <option value="{{ v.name }}" 
+                    data-lat="{{ v.latitude }}" 
+                    data-lng="{{ v.longitude }}"
+                    {% if v.district %}data-district="{{ v.district.district_name }}"{% endif %}
+                    {% if v.district and v.district.state %}data-state="{{ v.district.state.state_name }}"{% endif %}>
+            </option>
+            {% endfor %}
+        </datalist>
+    </div>
+
+    <!-- Product Type Filters Container -->
+    <div style="width: 550px; margin-bottom: 20px;">
+        <label style="font-weight: 500; color: #7c7ca5; font-size: 16px; display: block; margin-bottom: 8px;">
+            Filter by Product Types:
+        </label>
+        
+        <div id="productFiltersContainer">
+            <!-- Single filter dropdown -->
+            <div class="filter-row" style="display: flex; flex-direction: column; padding: 12px; border: 1px solid #e9e4f0; border-radius: 8px; background-color: #f9f7ff; margin-bottom: 12px;">
+                <label style="font-weight: 500; color: #3a3a55; font-size: 16px; margin-bottom: 8px;">
+                    Filter by Product Types:
+                </label>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <select class="productTypeFilter" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #dcd6f0; font-size: 16px; background-color: white;">
+                        <option value="">Select Product Type</option>
+                        {% for attr in attribute_types %}
+                        <option value="{{ attr.name }}">{{ attr.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Village Info -->
+    <div id="villageInfo" style="margin-top: 25px; display: none; line-height: 1.6;">
+        <div style="font-size: 40px; font-weight: 600; color: #9191e6; margin-bottom: 10px;">
+            <span id="selectedVillageName"></span>
+        </div>
+        <div style="font-size: 20px; color: #9191e6; margin-bottom: 5px;">
+            <strong>District:</strong> <span id="villageDistrict"></span>
+        </div>
+        <div style="font-size: 20px; color: #9191e6;">
+            <strong>State:</strong> <span id="villageState"></span>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <div id="villageMap" 
+         style="height: 350px; width: 850px; border-radius: 12px; border: 2px solid #d1c4e9; display: none;
+                position: absolute; top: 0; right: 0; z-index: 100;">
+    </div>
+
+    <!-- Products and Selected Products Tables Container -->
+    <div id="tablesContainer" style="margin-top: 100px; display: flex; gap: 30px; flex-wrap: wrap;">
+        
+        <!-- Products Table -->
+        <div style="flex: 1; min-width: 500px;">
+            <div id="productsSection">
+                <h3 style="color: #7c7ca5; margin-bottom: 15px; font-size: 24px;">Available Products</h3>
+                <div style="margin-bottom: 15px;">
+                    <span style="font-weight: 500; color: #7c7ca5;">Currently showing: </span>
+                    <span id="currentFilter" style="color: #7c7ca5; font-style: italic;">All products</span>
+                </div>
+
+                <div id="productsTablesContainer">
+                    <!-- Show all products by default -->
+                    <div style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+                        Select a product type filter to view available products
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selected Products Summary Table -->
+        <div style="flex: 1; min-width: 500px;">
+            <div id="selectedProductsSection">
+                <h3 style="color: #7c7ca5; margin-bottom: 15px; font-size: 24px;">Selected Products Summary</h3>
+                <div style="margin-bottom: 15px;">
+                    <span style="font-weight: 500; color: #7c7ca5;">Selected: </span>
+                    <span id="selectedCount" style="color: #7c7ca5; font-style: italic;">0 products</span>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <thead>
+                        <tr style="background: #8a74b8;">
+                            <th style="padding: 10px; border: 1px solid #9191e6; text-align: left;">Product Name</th>
+                            <th style="padding: 10px; border: 1px solid #9191e6; text-align: left;">Product Type</th>
+                            <th style="padding: 10px; border: 1px solid #9191e6; text-align: left;">Weight (kg)</th>
+                            <th style="padding: 10px; border: 1px solid #9191e6; text-align: left;">Harvest Month</th>
+                        </tr>
+                    </thead>
+                    <tbody id="selectedProductsTable">
+                        <tr>
+                            <td colspan="4" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+                                No products selected yet
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- Date Field and Submit Button -->
+                <div id="submitSection" style="margin-top: 25px; display: none;">
+                    <div style="margin-bottom: 20px;">
+                        <label for="selectedDate" style="font-weight: 500; color: #7c7ca5; font-size: 16px; display: block; margin-bottom: 10px;">
+                            Select Date for Submission:
+                        </label>
+                        <input type="date" id="selectedDate" 
+                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #dcd6f0; font-size: 16px;">
+                    </div>
+                    
+                    <div style="text-align: right;">
+                        <button id="submitSelectedBtn" style="background: #007bff; color: white; border: none; border-radius: 8px; padding: 12px 24px; cursor: pointer; font-size: 16px; font-weight: 500;">
+                            Submit Selected Products
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Leaflet JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+// Get Django context data
+const productsData = {{ products_dict|safe }};
+const allAttributeTypes = [
+    {% for attr in attribute_types %}
+    "{{ attr.name }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+// CSRF token for AJAX requests
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const csrftoken = getCookie('csrftoken');
+
+// Transform products data
+const allProducts = [];
+for (const [productType, products] of Object.entries(productsData)) {
+    products.forEach(product => {
+        allProducts.push({
+            id: product.id,
+            product_name: product.product_name,
+            product_type: productType,
+            weight_kg: '', // Empty by default
+            harvest_month: '', // Empty by default
+            selected: false // Checkbox state
+        });
+    });
+}
+
+console.log("Products data:", allProducts);
+console.log("Attribute types:", allAttributeTypes);
+
+const mapDiv = document.getElementById('villageMap');
+const tablesContainer = document.getElementById('tablesContainer');
+const productsTablesContainer = document.getElementById('productsTablesContainer');
+const selectedProductsTable = document.getElementById('selectedProductsTable');
+const villageInfoDiv = document.getElementById('villageInfo');
+const villageDistrictSpan = document.getElementById('villageDistrict');
+const villageStateSpan = document.getElementById('villageState');
+const selectedVillageNameSpan = document.getElementById('selectedVillageName');
+const currentFilterSpan = document.getElementById('currentFilter');
+const selectedCountSpan = document.getElementById('selectedCount');
+const submitSection = document.getElementById('submitSection');
+const selectedDate = document.getElementById('selectedDate');
+const submitSelectedBtn = document.getElementById('submitSelectedBtn');
+
+
+let map, marker;
+let currentVillage = '';
+let lastSelectedDropdown = null;
+
+function showVillageOnMap(villageName) {
+    const option = Array.from(document.querySelectorAll('#villagesList option'))
+                        .find(opt => opt.value === villageName);
+
+    if (option) {
+        const lat = parseFloat(option.dataset.lat) || 20.5937;
+        const lng = parseFloat(option.dataset.lng) || 78.9629;
+        const district = option.dataset.district || "N/A";
+        const state = option.dataset.state || "N/A";
+
+        // Initialize map only once
+        if (!map) {
+            mapDiv.style.display = 'block';
+            map = L.map('villageMap', { 
+                zoomControl: true, 
+                attributionControl: false 
+            }).setView([lat, lng], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Remove existing marker
+        if (marker) map.removeLayer(marker);
+
+        // 🏡 Custom styled marker
+        const villageIcon = L.divIcon({
+            html: `
+                <div style="
+                    background: #4caf50;
+                    color: white;
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 18px;
+                    border: 3px solid white;
+                    box-shadow: 0 4px 12px rgba(76,175,80,0.3);
+                ">
+                    🏡
+                </div>
+            `,
+            className: 'village-marker',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+
+        // Add custom marker
+        marker = L.marker([lat, lng], { icon: villageIcon }).addTo(map);
+        map.setView([lat, lng], 12);
+
+        // Update UI info
+        selectedVillageNameSpan.textContent = villageName;
+        villageDistrictSpan.textContent = district;
+        villageStateSpan.textContent = state;
+        villageInfoDiv.style.display = 'block';
+
+        currentVillage = villageName;
+        updateProductDisplay();
+    }
+}
+
+function updateProductDisplay() {
+    const selectedTypes = Array.from(document.querySelectorAll('.productTypeFilter'))
+        .map(select => select.value)
+        .filter(value => value !== '');
+    
+    productsTablesContainer.innerHTML = '';
+    
+    if (selectedTypes.length > 0) {
+        // Show only the selected dropdown's products
+        let filteredProducts = [];
+        let filterText = '';
+        
+        if (lastSelectedDropdown && lastSelectedDropdown.value) {
+            // Show only products from the selected dropdown
+            filteredProducts = allProducts.filter(p => p.product_type === lastSelectedDropdown.value);
+            filterText = `${lastSelectedDropdown.value} products`;
+        } else {
+            // If no last selected dropdown, show the selected one
+            const selectedType = selectedTypes[0];
+            filteredProducts = allProducts.filter(p => p.product_type === selectedType);
+            filterText = `${selectedType} products`;
+        }
+        
+        currentFilterSpan.textContent = filterText;
+
+        if (filteredProducts.length === 0) {
+            productsTablesContainer.innerHTML = `<div style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+                No products found for ${filterText}
+            </div>`;
+            document.getElementById('selectedProductsSection').style.display = 'block';
+            submitSection.style.display = 'none';
+            return;
+        }
+
+        // Create table container for this product type
+        const tableContainer = document.createElement('div');
+        tableContainer.className = 'product-table-container';
+        tableContainer.style.marginBottom = '25px';
+        tableContainer.style.border = '1px solid #e9e4f0';
+        tableContainer.style.borderRadius = '8px';
+        tableContainer.style.overflow = 'hidden';
+
+        // Create table header with product type
+        const tableHeader = document.createElement('div');
+        tableHeader.style.background = '#8a74b8';
+        tableHeader.style.color = 'white';
+        tableHeader.style.padding = '15px';
+        tableHeader.style.fontWeight = 'bold';
+        tableHeader.style.fontSize = '18px';
+        tableHeader.textContent = `${filterText}`;
+        tableContainer.appendChild(tableHeader);
+
+        // Create select all checkbox for this table
+        const selectAllContainer = document.createElement('div');
+        selectAllContainer.style.padding = '12px';
+        selectAllContainer.style.background = '#f9f7ff';
+        selectAllContainer.style.borderBottom = '1px solid #e9e4f0';
+        
+        const selectAllCheckbox = document.createElement('input');
+        selectAllCheckbox.type = 'checkbox';
+        selectAllCheckbox.id = `selectAll-${lastSelectedDropdown ? lastSelectedDropdown.value : selectedTypes[0]}`;
+        selectAllCheckbox.style.cursor = 'pointer';
+        selectAllCheckbox.style.marginRight = '10px';
+        
+        const selectAllLabel = document.createElement('label');
+        selectAllLabel.htmlFor = `selectAll-${lastSelectedDropdown ? lastSelectedDropdown.value : selectedTypes[0]}`;
+        selectAllLabel.textContent = 'Select All';
+        selectAllLabel.style.cursor = 'pointer';
+        selectAllLabel.style.fontWeight = '500';
+        selectAllLabel.style.color = '#3a3a55';
+        selectAllLabel.style.fontSize = '14px';
+        
+        selectAllContainer.appendChild(selectAllCheckbox);
+        selectAllContainer.appendChild(selectAllLabel);
+        tableContainer.appendChild(selectAllContainer);
+
+        // Create table
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr style="background: #e9e4f0;">
+                <th style="padding: 12px; border: 1px solid #9191e6; width: 30px; text-align: center;">Select</th>
+                <th style="padding: 12px; border: 1px solid #9191e6; text-align: left;">Product Name</th>
+                <th style="padding: 12px; border: 1px solid #9191e6; text-align: left;">Product Type</th>
+                <th style="padding: 12px; border: 1px solid #9191e6; text-align: left;">Weight (kg)</th>
+                <th style="padding: 12px; border: 1px solid #9191e6; text-align: left;">Harvest Month</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+
+        // Create table body
+        const tbody = document.createElement('tbody');
+        
+        filteredProducts.forEach((p, index) => {
+            const globalIndex = allProducts.findIndex(prod => 
+                prod.id === p.id && prod.product_type === p.product_type
+            );
+            
+            const row = document.createElement('tr');
+            
+            const weightCell = p.selected ? 
+                `<input type="number" class="weight-input" data-index="${globalIndex}" 
+                        value="${p.weight_kg ? p.weight_kg.replace(' kg', '') : ''}" 
+                        placeholder="Enter weight" 
+                        style="width: 100%; padding: 8px; border: 1px solid #dcd6f0; border-radius: 4px; font-size: 14px;">` :
+                `<span style="color: #888;">${p.weight_kg || '-'}</span>`;
+            
+            const monthCell = p.selected ?
+                `<select class="month-select" data-index="${globalIndex}" style="width: 100%; padding: 8px; border: 1px solid #dcd6f0; border-radius: 4px; font-size: 14px;">
+                    <option value="">Select Month</option>
+                    <option value="January" ${p.harvest_month === 'January' ? 'selected' : ''}>January</option>
+                    <option value="February" ${p.harvest_month === 'February' ? 'selected' : ''}>February</option>
+                    <option value="March" ${p.harvest_month === 'March' ? 'selected' : ''}>March</option>
+                    <option value="April" ${p.harvest_month === 'April' ? 'selected' : ''}>April</option>
+                    <option value="May" ${p.harvest_month === 'May' ? 'selected' : ''}>May</option>
+                    <option value="June" ${p.harvest_month === 'June' ? 'selected' : ''}>June</option>
+                    <option value="July" ${p.harvest_month === 'July' ? 'selected' : ''}>July</option>
+                    <option value="August" ${p.harvest_month === 'August' ? 'selected' : ''}>August</option>
+                    <option value="September" ${p.harvest_month === 'September' ? 'selected' : ''}>September</option>
+                    <option value="October" ${p.harvest_month === 'October' ? 'selected' : ''}>October</option>
+                    <option value="November" ${p.harvest_month === 'November' ? 'selected' : ''}>November</option>
+                    <option value="December" ${p.harvest_month === 'December' ? 'selected' : ''}>December</option>
+                </select>` :
+                `<span style="color: #888;">${p.harvest_month || '-'}</span>`;
+            
+            row.innerHTML = `
+                <td style="padding: 12px; border: 1px solid #dcd6f0; text-align: center;">
+                    <input type="checkbox" class="product-checkbox" data-index="${globalIndex}" ${p.selected ? 'checked' : ''} style="cursor: pointer;">
+                </td>
+                <td style="padding: 12px; border: 1px solid #dcd6f0;">${p.product_name}</td>
+                <td style="padding: 12px; border: 1px solid #dcd6f0;">${p.product_type}</td>
+                <td style="padding: 12px; border: 1px solid #dcd6f0;">
+                    ${weightCell}
+                </td>
+                <td style="padding: 12px; border: 1px solid #dcd6f0;">
+                    ${monthCell}
+                </td>
+            `;
+            
+            tbody.appendChild(row);
+        });
+
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
+        productsTablesContainer.appendChild(tableContainer);
+
+        // Add event listener for select all checkbox
+        selectAllCheckbox.addEventListener('change', function() {
+            const currentType = lastSelectedDropdown ? lastSelectedDropdown.value : selectedTypes[0];
+            const productsOfThisType = allProducts.filter(p => p.product_type === currentType);
+            productsOfThisType.forEach(p => {
+                p.selected = this.checked;
+            });
+            updateProductDisplay();
+        });
+
+        // Update select all checkbox state
+        const allChecked = filteredProducts.length > 0 && filteredProducts.every(p => p.selected);
+        const someChecked = filteredProducts.some(p => p.selected);
+        selectAllCheckbox.checked = allChecked;
+        selectAllCheckbox.indeterminate = someChecked && !allChecked;
+
+        // Add event listeners
+        addEventListeners();
+        updateSelectedProductsTable();
+    } else {
+        currentFilterSpan.textContent = 'All products';
+        productsTablesContainer.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+                Select a product type filter to view available products
+            </div>
+        `;
+        document.getElementById('selectedProductsSection').style.display = 'block';
+        submitSection.style.display = 'none';
+    }
+}
+
+function updateSelectedProductsTable() {
+    const selectedProducts = allProducts.filter(p => p.selected && p.weight_kg && p.harvest_month);
+    selectedProductsTable.innerHTML = '';
+    
+    if (selectedProducts.length > 0) {
+        selectedCountSpan.textContent = `${selectedProducts.length} product(s) with complete data`;
+        submitSection.style.display = 'block';
+        
+        selectedProducts.forEach(p => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="padding: 10px; border: 1px solid #b3e5fc;">${p.product_name}</td>
+                <td style="padding: 10px; border: 1px solid #b3e5fc;">${p.product_type}</td>
+                <td style="padding: 10px; border: 1px solid #b3e5fc;">${p.weight_kg}</td>
+                <td style="padding: 10px; border: 1px solid #b3e5fc;">${p.harvest_month}</td>
+            `;
+            selectedProductsTable.appendChild(row);
+        });
+    } else {
+        const selectedCount = allProducts.filter(p => p.selected).length;
+        if (selectedCount > 0) {
+            selectedCountSpan.textContent = `${selectedCount} product(s) selected - enter weight and month to see summary`;
+            selectedProductsTable.innerHTML = `
+                <tr>
+                    <td colspan="4" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+                        No products with complete data yet. Please enter weight and select harvest month for selected products.
+                    </td>
+                </tr>
+            `;
+            submitSection.style.display = 'none';
+        } else {
+            selectedCountSpan.textContent = '0 products';
+            selectedProductsTable.innerHTML = `
+                <tr>
+                    <td colspan="4" style="padding: 20px; text-align: center; color: #888; font-style: italic;">
+                        No products selected yet
+                    </td>
+                </tr>
+            `;
+            submitSection.style.display = 'none';
+        }
+    }
+}
+
+function addEventListeners() {
+    // Checkbox event listeners
+    document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const index = parseInt(this.dataset.index);
+            allProducts[index].selected = this.checked;
+            updateProductDisplay();
+        });
+    });
+
+    // Weight input event listeners - auto-save on change
+    document.querySelectorAll('.weight-input').forEach(input => {
+        input.addEventListener('change', function() {
+            const index = parseInt(this.dataset.index);
+            const weight = this.value.trim();
+            if (weight) {
+                allProducts[index].weight_kg = weight + ' kg';
+                updateSelectedProductsTable();
+            }
+        });
+    });
+
+    // Month select event listeners - auto-save on change
+    document.querySelectorAll('.month-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const index = parseInt(this.dataset.index);
+            const month = this.value;
+            if (month) {
+                allProducts[index].harvest_month = month;
+                updateSelectedProductsTable();
+            }
+        });
+    });
+}
+
+// Submit selected products with date
+submitSelectedBtn.addEventListener('click', function() {
+    const selectedProducts = allProducts.filter(p => p.selected && p.weight_kg && p.harvest_month);
+    const selectedDateValue = selectedDate.value;
+    
+    if (selectedProducts.length === 0) {
+        alert('Please select products and enter weight and harvest month for at least one product');
+        return;
+    }
+    
+    if (!selectedDateValue) {
+        alert('Please select a date for submission');
+        return;
+    }
+    
+    if (!currentVillage) {
+        alert('Please select a village first');
+        return;
+    }
+    
+    // Prepare data for submission
+    const submissionData = {
+        village: currentVillage,
+        date: selectedDateValue,
+        products: selectedProducts.map(p => ({
+            id: p.id,
+            product_name: p.product_name,
+            product_type: p.product_type,
+            weight_kg: p.weight_kg,
+            harvest_month: p.harvest_month
+        }))
+    };
+    
+    console.log('Submitting selected products:', submissionData);
+    
+    // Show loading state
+    const originalText = submitSelectedBtn.textContent;
+    submitSelectedBtn.textContent = 'Submitting...';
+    submitSelectedBtn.disabled = true;
+    
+    // Send data to server via AJAX
+    fetch('/submit-products/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(submissionData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Successfully submitted ${selectedProducts.length} product(s) for date: ${selectedDateValue}!`);
+            
+            // Reset form after successful submission
+            selectedDate.value = '';
+            
+            // Clear selections after submission
+            allProducts.forEach(p => {
+                p.selected = false;
+                p.weight_kg = '';
+                p.harvest_month = '';
+            });
+            updateProductDisplay();
+        } else {
+            alert('Error submitting products: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error submitting products. Please try again.');
+    })
+    .finally(() => {
+        // Restore button state
+        submitSelectedBtn.textContent = originalText;
+        submitSelectedBtn.disabled = false;
+    });
+});
+
+// Event Listeners
+document.getElementById('villageSearch').addEventListener('change', function() {
+    showVillageOnMap(this.value.trim());
+});
+
+document.getElementById('villageSearch').addEventListener('keypress', function(e) {
+    if(e.key === 'Enter') {
+        e.preventDefault();
+        showVillageOnMap(this.value.trim());
+    }
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    const firstSelect = document.querySelector('.productTypeFilter');
+    if (firstSelect) {
+        firstSelect.addEventListener('change', function() {
+            if (this.value) {
+                lastSelectedDropdown = this;
+            }
+            updateProductDisplay();
+        });
+    }
+    
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    selectedDate.value = today;
+    
+    // Show tables by default
+    tablesContainer.style.display = 'flex';
+    document.getElementById('selectedProductsSection').style.display = 'block';
+});
+</script>
+
+<style>
+    .productTypeFilter {
+        cursor: pointer;
+        transition: border-color 0.3s;
+    }
+    
+    .productTypeFilter:focus {
+        border-color: #8a74b8;
+        outline: none;
+        box-shadow: 0 0 5px rgba(138, 116, 184, 0.3);
+    }
+    
+    #submitSelectedBtn:hover {
+        background: #0056b3 !important;
+        transform: translateY(-1px);
+    }
+    
+    input[type="number"], select, input[type="date"] {
+        transition: border-color 0.3s;
+    }
+    
+    input[type="number"]:focus, select:focus, input[type="date"]:focus {
+        border-color: #8a74b8 !important;
+        outline: none;
+        box-shadow: 0 0 5px rgba(138, 116, 184, 0.3);
+    }
+    
+    /* Highlight active dropdown */
+    .productTypeFilter:focus {
+        border-color: #8a74b8 !important;
+        box-shadow: 0 0 0 2px rgba(138, 116, 184, 0.2) !important;
+    }
+    
+    .product-table-container {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        #villageMap {
+            position: relative;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        #tablesContainer {
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        div {
+            width: 100% !important;
+        }
+    }
+</style>
+{% endblock %}

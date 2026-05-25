@@ -1,0 +1,2101 @@
+{% extends "base.html" %} {% block title %} Home - India Village-Mandi Routing
+{%endblock %} {% block content %}
+<style>
+  .dropdown-panel {
+    display: none;
+    background: #f1f3f9;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    margin-top: 5px;
+    width: 320px;
+    position: absolute;
+    z-index: 5000;
+    top: 100%;
+    left: 0;
+  }
+
+  .panel-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .dropdown-panel select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-top: 5px;
+  }
+
+  .corridor-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .route-type-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .dropdown-actions {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    min-width: 180px;
+    background: #f1f3f9;
+    border: 1px solid #cccccc;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+  }
+
+  .dropdown-actions button {
+    display: block;
+    width: 100%;
+    padding: 10px 15px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .dropdown-actions button:hover {
+    background: #53bbef;
+  }
+
+  #map {
+    width: 100%;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    height: 720px;
+  }
+
+  .selected-info {
+    margin-bottom: 15px;
+    padding: 12px 15px;
+    background: #f1f3f9;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    color: #333;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .top-buttons-container > button,
+  .top-buttons-container .panel-wrapper > button,
+  .top-buttons-container .corridor-wrapper > button,
+  .top-buttons-container .route-type-wrapper > button {
+    transition: all 0.3s ease;
+  }
+
+  .top-buttons-container > button:hover,
+  .top-buttons-container .panel-wrapper > button:hover,
+  .top-buttons-container .corridor-wrapper > button:hover,
+  .top-buttons-container .route-type-wrapper > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0.9;
+  }
+
+  .poi-label {
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid #888;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #111;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    white-space: nowrap;
+    transform: translate(-50%, 6px);
+    pointer-events: none;
+  }
+</style>
+
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css"
+/>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://rawgit.com/mapbox/leaflet-image/master/leaflet-image.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+
+<!-- ====================== TOP BUTTONS ====================== -->
+<div
+  class="top-buttons-container"
+  style="display: flex; gap: 20px; margin-bottom: 20px; position: relative"
+>
+  <!-- Village Button with Panel -->
+  <div class="panel-wrapper">
+    <button
+      id="villageBtn"
+      style="
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        background: #4527a0;
+        color: white;
+        cursor: pointer;
+      "
+    >
+      Select Village
+    </button>
+    <!-- Village Panel -->
+    <div id="villagePanel" class="dropdown-panel">
+      <h2 style="margin-top: 0; color: #4527a0">Select Village</h2>
+      <div style="margin-bottom: 15px">
+        <label for="villageState" style="color: #7c7ca5">State</label>
+        <select id="villageState">
+          <option value="">Select State</option>
+          {% for s in states %}
+          <option value="{{ s.id }}">{{ s.state_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom: 15px">
+        <label for="villageDistrict" style="color: #7c7ca5">District</label>
+        <select id="villageDistrict">
+          <option value="">Select District</option>
+          {% for d in districts %}
+          <option value="{{ d.id }}" data-state="{{ d.state.id }}">
+            {{ d.district_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom: 15px">
+        <label for="village" style="color: #7c7ca5">Village</label>
+        <select id="village">
+          <option value="">Select Village</option>
+          {% for v in villages %}
+          <option
+            value="{{ v.id }}"
+            data-district="{{ v.district.id }}"
+            data-lat="{{ v.latitude }}"
+            data-lng="{{ v.longitude }}"
+          >
+            {{ v.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button
+        onclick="closePanel('villagePanel')"
+        style="
+          margin-top: 10px;
+          padding: 8px 16px;
+          border-radius: 6px;
+          border: none;
+          background: #388e3c;
+          color: white;
+        "
+      >
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- Mandi Button with Panel -->
+  <div class="panel-wrapper">
+    <button
+      id="mandiBtn"
+      style="
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        background: #4527a0;
+        color: white;
+        cursor: pointer;
+      "
+    >
+      Select Mandi
+    </button>
+    <!-- Mandi Panel -->
+    <div id="mandiPanel" class="dropdown-panel">
+      <h2 style="margin-top: 0; color: #4527a0">Select Mandi</h2>
+      <div style="margin-bottom: 15px">
+        <label for="mandiState" style="color: #7c7ca5">State</label>
+        <select id="mandiState">
+          <option value="">Select State</option>
+          {% for s in states %}
+          <option value="{{ s.id }}">{{ s.state_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom: 15px">
+        <label for="mandiDistrict" style="color: #7c7ca5">District</label>
+        <select id="mandiDistrict">
+          <option value="">Select District</option>
+          {% for d in districts %}
+          <option value="{{ d.id }}" data-state="{{ d.state.id }}">
+            {{ d.district_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom: 15px">
+        <label for="mandi" style="color: #7c7ca5">Mandi</label>
+        <select id="mandi">
+          <option value="">Select Mandi</option>
+          {% for m in mandis %}
+          <option
+            value="{{ m.id }}"
+            data-district="{{ m.district.id }}"
+            data-lat="{{ m.latitude }}"
+            data-lng="{{ m.longitude }}"
+          >
+            {{ m.mandi_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button
+        onclick="closePanel('mandiPanel')"
+        style="
+          margin-top: 10px;
+          padding: 8px 16px;
+          border-radius: 6px;
+          border: none;
+          background: #388e3c;
+          color: white;
+        "
+      >
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- Destination Button with Panel -->
+  <div class="panel-wrapper">
+    <button
+      id="destinationBtn"
+      style="
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        background: #4527a0;
+        color: white;
+        cursor: pointer;
+      "
+    >
+      Select Next Destination
+    </button>
+    <!-- Destination Panel -->
+    <div id="destinationPanel" class="dropdown-panel">
+      <h2 style="margin-top: 0; color: #4527a0">Select Destination Area</h2>
+      <div style="margin-bottom: 15px">
+        <label for="destinationType" style="color: #7c7ca5"
+          >Destination Type</label
+        >
+        <select id="destinationType">
+          <option value="">Select Type</option>
+          <option value="village">Village</option>
+          <option value="mandi">Mandi</option>
+        </select>
+      </div>
+      <div id="destinationContent"></div>
+      <button
+        onclick="closePanel('destinationPanel')"
+        style="
+          margin-top: 10px;
+          padding: 8px 16px;
+          border-radius: 6px;
+          border: none;
+          background: #388e3c;
+          color: white;
+        "
+      >
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- Corridor Menu -->
+  <div class="corridor-wrapper">
+    <button
+      id="corridorBtn"
+      type="button"
+      style="
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        background: #4527a0;
+        color: white;
+        cursor: pointer;
+      "
+    >
+      Show Corridor ▾
+    </button>
+    <div id="corridorMenu" class="dropdown-actions" style="display: none">
+      <button type="button" data-type="local">Local Corridor</button>
+      <button type="button" data-type="highway">Highway</button>
+      <button type="button" data-type="shortest">Shortest</button>
+    </div>
+  </div>
+
+  <!-- Route Type Menu -->
+  <div class="route-type-wrapper">
+    <button
+      id="routeTypeBtn"
+      type="button"
+      style="
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        background: #4527a0;
+        color: white;
+        cursor: pointer;
+      "
+    >
+      Route Type ▾
+    </button>
+    <div id="routeTypeMenu" class="dropdown-actions" style="display: none">
+      <button type="button" data-type="direct">Direct Route</button>
+      <button type="button" data-type="village">
+        Intermediate Village Route
+      </button>
+      <button type="button" data-type="mandi">Intermediate Mandi Route</button>
+    </div>
+  </div>
+
+  <button
+    onclick="downloadPDF()"
+    style="
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      background: #60d348;
+      color: white;
+      cursor: pointer;
+    "
+  >
+    Download Details
+  </button>
+  <button
+    onclick="resetPage()"
+    style="
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      background: #e10c0c;
+      color: white;
+      cursor: pointer;
+    "
+  >
+    Reset
+  </button>
+</div>
+
+<!-- ====================== SELECTED INFO PANEL ====================== -->
+<div class="selected-info">
+  <strong>No points selected.</strong>
+</div>
+
+<!-- ====================== ROUTE LOADING SPINNER ====================== -->
+<div
+  id="routeSpinner"
+  style="
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10000;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  "
+>
+  <div style="display: flex; flex-direction: column; align-items: center">
+    <div
+      class="loader"
+      style="
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4527a0;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      "
+    ></div>
+    <span style="margin-top: 10px; color: #4527a0; font-weight: bold"
+      >Loading Route...</span
+    >
+  </div>
+</div>
+
+<!-- ====================== MAP CONTAINER ====================== -->
+<div id="map"></div>
+
+<!-- ====================== MAIN SCRIPT ====================== -->
+<script>
+  // =================== GLOBAL VARIABLES =====================
+  let map;
+  let selectedPoints = [];
+  let originalPoints = []; // Store original manually selected points
+  let routeLayer = null;
+  let currentCorridorType = null;
+  let currentRouteType = null;
+  let poiLayer;
+  let activePoILabel = null;
+  let activePoILabelTimer = null;
+  let intermediatePointsAdded = false; // Track if intermediate points were added
+
+  const icons = {
+    village: L.divIcon({
+      className: "custom-marker",
+      html: '<img src="/static/images/village_icon.png" width="32" height="32">',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+    }),
+    mandi: L.divIcon({
+      className: "custom-marker",
+      html: '<img src="/static/images/mandi_icon.png" width="32" height="32">',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+    }),
+    destination: L.divIcon({
+      className: "custom-marker",
+      html: '<img src="/static/images/point_icon.png" width="32" height="32">',
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+    }),
+  };
+
+  // =================== HELPER FUNCTIONS FOR POI MARKERS =====================
+
+  // Helper function to build coordinates from route layer
+  function buildCoordsFromRouteLayer(layer) {
+    try {
+      const geo = layer.toGeoJSON();
+      const coords = [];
+      if (!geo || !geo.features) return coords;
+      geo.features.forEach((f) => {
+        const g = f.geometry;
+        if (!g) return;
+        if (g.type === "LineString") {
+          g.coordinates.forEach((c) => coords.push(c)); // [lng, lat]
+        } else if (g.type === "MultiLineString") {
+          g.coordinates.forEach((line) => line.forEach((c) => coords.push(c)));
+        }
+      });
+      // remove consecutive duplicates
+      const cleaned = [];
+      for (let i = 0; i < coords.length; i++) {
+        const c = coords[i];
+        const prev = cleaned[cleaned.length - 1];
+        if (!prev || prev[0] !== c[0] || prev[1] !== c[1]) cleaned.push(c);
+      }
+      return cleaned;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Geometry helper functions
+  const R_EARTH = 6371000;
+  function deg2rad(d) {
+    return (d * Math.PI) / 180;
+  }
+  function haversineMeters(aLat, aLng, bLat, bLng) {
+    const φ1 = deg2rad(aLat),
+      φ2 = deg2rad(bLat);
+    const dφ = deg2rad(bLat - aLat),
+      dλ = deg2rad(bLng - aLng);
+    const sinDφ = Math.sin(dφ / 2),
+      sinDλ = Math.sin(dλ / 2);
+    const aa = sinDφ * sinDφ + Math.cos(φ1) * Math.cos(φ2) * sinDλ * sinDλ;
+    const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+    return R_EARTH * c;
+  }
+  function pointToSegmentDistMeters(ptLat, ptLng, aLat, aLng, bLat, bLng) {
+    if (aLat === bLat && aLng === bLng)
+      return haversineMeters(ptLat, ptLng, aLat, aLng);
+
+    const meanLat = deg2rad((aLat + bLat + ptLat) / 3);
+    const dxAB = deg2rad(bLng - aLng) * Math.cos(meanLat) * R_EARTH;
+    const dyAB = deg2rad(bLat - aLat) * R_EARTH;
+    const dxAP = deg2rad(ptLng - aLng) * Math.cos(meanLat) * R_EARTH;
+    const dyAP = deg2rad(ptLat - aLat) * R_EARTH;
+
+    const ab2 = dxAB * dxAB + dyAB * dyAB;
+    let t = (dxAP * dxAB + dyAP * dyAB) / ab2;
+    if (t < 0) t = 0;
+    if (t > 1) t = 1;
+
+    const closestX = dxAB * t;
+    const closestY = dyAB * t;
+    const dX = dxAP - closestX;
+    const dY = dyAP - closestY;
+    return Math.sqrt(dX * dX + dY * dY);
+  }
+
+  // Collect POIs from select lists
+  function collectPOIsFromSelects() {
+    const villages = [];
+    const mandis = [];
+
+    const vSelect = document.getElementById("village");
+    if (vSelect) {
+      for (let opt of vSelect.options) {
+        if (!opt.value) continue;
+        const lat = parseFloat(opt.dataset.lat);
+        const lng = parseFloat(opt.dataset.lng);
+        if (!isNaN(lat) && !isNaN(lng))
+          villages.push({
+            id: `village_${opt.value}`,
+            name: opt.text,
+            lat,
+            lng,
+          });
+      }
+    }
+
+    const mSelect = document.getElementById("mandi");
+    if (mSelect) {
+      for (let opt of mSelect.options) {
+        if (!opt.value) continue;
+        const lat = parseFloat(opt.dataset.lat);
+        const lng = parseFloat(opt.dataset.lng);
+        if (!isNaN(lat) && !isNaN(lng))
+          mandis.push({
+            id: `mandi_${opt.value}`,
+            name: opt.text,
+            lat,
+            lng,
+          });
+      }
+    }
+
+    // include cloned destination selects if present
+    const destV = document.getElementById("destVillage");
+    if (destV) {
+      for (let opt of destV.options) {
+        if (!opt.value) continue;
+        const lat = parseFloat(opt.dataset.lat);
+        const lng = parseFloat(opt.dataset.lng);
+        if (!isNaN(lat) && !isNaN(lng))
+          villages.push({
+            id: `dest_village_${opt.value}`,
+            name: opt.text,
+            lat,
+            lng,
+          });
+      }
+    }
+
+    const destM = document.getElementById("destMandi");
+    if (destM) {
+      for (let opt of destM.options) {
+        if (!opt.value) continue;
+        const lat = parseFloat(opt.dataset.lat);
+        const lng = parseFloat(opt.dataset.lng);
+        if (!isNaN(lat) && !isNaN(lng))
+          mandis.push({
+            id: `dest_mandi_${opt.value}`,
+            name: opt.text,
+            lat,
+            lng,
+          });
+      }
+    }
+
+    return { villages, mandis };
+  }
+
+  // POI Label functions
+  function createPoILabel(text, latlng) {
+    // remove any existing label & timer
+    removePoILabel();
+
+    // create container
+    const div = document.createElement("div");
+    div.className = "poi-label";
+    div.textContent = text || "";
+    div.style.pointerEvents = "none";
+
+    // attach to markerPane
+    const pane = map.getPanes().markerPane || map.getPanes().overlayPane;
+    pane.appendChild(div);
+
+    activePoILabel = { el: div, latlng };
+
+    // position now and on move/zoom
+    positionPoILabel();
+    map.on("move zoom", positionPoILabel);
+
+    // auto-remove after 2 seconds
+    activePoILabelTimer = setTimeout(() => {
+      removePoILabel();
+    }, 2000);
+
+    // remove label if user clicks elsewhere on map
+    map.once("click", () => {
+      removePoILabel();
+    });
+  }
+
+  function removePoILabel() {
+    if (!activePoILabel) return;
+
+    try {
+      const pane = map.getPanes().markerPane || map.getPanes().overlayPane;
+      if (activePoILabel.el && activePoILabel.el.parentNode) {
+        activePoILabel.el.parentNode.removeChild(activePoILabel.el);
+      }
+    } catch (e) {
+      // ignore DOM errors
+    }
+
+    // clear timer and listeners
+    if (activePoILabelTimer) {
+      clearTimeout(activePoILabelTimer);
+      activePoILabelTimer = null;
+    }
+    map.off("move zoom", positionPoILabel);
+    activePoILabel = null;
+  }
+
+  function positionPoILabel() {
+    if (!activePoILabel) return;
+    try {
+      const p = map.latLngToLayerPoint(activePoILabel.latlng);
+      const el = activePoILabel.el;
+      el.style.position = "absolute";
+      const offsetY = 20;
+      el.style.left = p.x + "px";
+      el.style.top = p.y + offsetY + "px";
+      el.style.zIndex = 10000;
+      el.style.transform = "translate(-50%, 0)";
+    } catch (e) {
+      // ignore positioning errors
+    }
+  }
+
+  // MAIN: add village & mandi icon markers that are within radiusMeters of routeLayer
+  function showVillageMandiMarkersNearRouteLayer(
+    routeLayer,
+    radiusMeters = 100
+  ) {
+    // clear old markers & label
+    poiLayer.clearLayers();
+    removePoILabel();
+
+    if (!routeLayer) return;
+    const coords = buildCoordsFromRouteLayer(routeLayer);
+    if (!coords || coords.length < 2) return;
+
+    const { villages, mandis } = collectPOIsFromSelects();
+
+    function addMarker(item, isVillage) {
+      const icon = isVillage ? icons.village : icons.mandi;
+      const marker = L.marker([item.lat, item.lng], { icon }).addTo(poiLayer);
+
+      marker.on("click", function (e) {
+        createPoILabel(item.name || "", marker.getLatLng());
+
+        try {
+          if (typeof fetchAndShowSideDetails === "function") {
+            fetchAndShowSideDetails(item, isVillage);
+          }
+        } catch (err) {
+          console.error("fetchAndShowSideDetails error:", err);
+        }
+      });
+
+      try {
+        marker.unbindTooltip();
+        marker.unbindPopup();
+      } catch (e) {}
+    }
+
+    // check villages
+    for (let v of villages) {
+      let minD = Infinity;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const A = coords[i],
+          B = coords[i + 1];
+        const d = pointToSegmentDistMeters(
+          v.lat,
+          v.lng,
+          A[1],
+          A[0],
+          B[1],
+          B[0]
+        );
+        if (d < minD) minD = d;
+        if (minD <= radiusMeters) break;
+      }
+      if (minD <= radiusMeters) addMarker(v, true);
+    }
+
+    // check mandis
+    for (let m of mandis) {
+      let minD = Infinity;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const A = coords[i],
+          B = coords[i + 1];
+        const d = pointToSegmentDistMeters(
+          m.lat,
+          m.lng,
+          A[1],
+          A[0],
+          B[1],
+          B[0]
+        );
+        if (d < minD) minD = d;
+        if (minD <= radiusMeters) break;
+      }
+      if (minD <= radiusMeters) addMarker(m, false);
+    }
+  }
+
+  // Show only village markers near route
+  function showVillageMarkersNearRouteLayer(routeLayer, radiusMeters = 100) {
+    poiLayer.clearLayers();
+    removePoILabel();
+
+    if (!routeLayer) return;
+    const coords = buildCoordsFromRouteLayer(routeLayer);
+    if (!coords || coords.length < 2) return;
+
+    const { villages } = collectPOIsFromSelects();
+
+    function addMarker(item) {
+      const icon = icons.village;
+      const marker = L.marker([item.lat, item.lng], { icon }).addTo(poiLayer);
+
+      marker.on("click", function (e) {
+        createPoILabel(item.name || "", marker.getLatLng());
+
+        try {
+          if (typeof fetchAndShowSideDetails === "function") {
+            fetchAndShowSideDetails(item, true);
+          }
+        } catch (err) {
+          console.error("fetchAndShowSideDetails error:", err);
+        }
+      });
+
+      try {
+        marker.unbindTooltip();
+        marker.unbindPopup();
+      } catch (e) {}
+    }
+
+    // check villages only
+    for (let v of villages) {
+      let minD = Infinity;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const A = coords[i],
+          B = coords[i + 1];
+        const d = pointToSegmentDistMeters(
+          v.lat,
+          v.lng,
+          A[1],
+          A[0],
+          B[1],
+          B[0]
+        );
+        if (d < minD) minD = d;
+        if (minD <= radiusMeters) break;
+      }
+      if (minD <= radiusMeters) addMarker(v);
+    }
+  }
+
+  // Show only mandi markers near route
+  function showMandiMarkersNearRouteLayer(routeLayer, radiusMeters = 100) {
+    poiLayer.clearLayers();
+    removePoILabel();
+
+    if (!routeLayer) return;
+    const coords = buildCoordsFromRouteLayer(routeLayer);
+    if (!coords || coords.length < 2) return;
+
+    const { mandis } = collectPOIsFromSelects();
+
+    function addMarker(item) {
+      const icon = icons.mandi;
+      const marker = L.marker([item.lat, item.lng], { icon }).addTo(poiLayer);
+
+      marker.on("click", function (e) {
+        createPoILabel(item.name || "", marker.getLatLng());
+
+        try {
+          if (typeof fetchAndShowSideDetails === "function") {
+            fetchAndShowSideDetails(item, false);
+          }
+        } catch (err) {
+          console.error("fetchAndShowSideDetails error:", err);
+        }
+      });
+
+      try {
+        marker.unbindTooltip();
+        marker.unbindPopup();
+      } catch (e) {}
+    }
+
+    // check mandis only
+    for (let m of mandis) {
+      let minD = Infinity;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const A = coords[i],
+          B = coords[i + 1];
+        const d = pointToSegmentDistMeters(
+          m.lat,
+          m.lng,
+          A[1],
+          A[0],
+          B[1],
+          B[0]
+        );
+        if (d < minD) minD = d;
+        if (minD <= radiusMeters) break;
+      }
+      if (minD <= radiusMeters) addMarker(m);
+    }
+  }
+
+  // =================== MAP INIT =====================
+  function initMap() {
+    map = L.map("map").setView([30.7333, 76.7794], 7);
+    let osmLayer = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        attribution: "&copy; OpenStreetMap contributors",
+      }
+    ).addTo(map);
+
+    let satelliteLayer = L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    );
+
+    L.control
+      .layers({ "Street Map": osmLayer, Satellite: satelliteLayer })
+      .addTo(map);
+
+    // Initialize POI layer
+    poiLayer = L.layerGroup().addTo(map);
+
+    // Legend
+    const widthLegend = L.control({ position: "topright" });
+    widthLegend.onAdd = function (map) {
+      const div = L.DomUtil.create("div", "info legend");
+      const widths = ["<4", "4-6", "6-10", ">10", "None"];
+      const colors = ["red", "orange", "blue", "black", "gray"];
+
+      let html =
+        '<h4 style="color:#7c7ca5; margin-bottom:6px;">Road Width Legend</h4>';
+      for (let i = 0; i < widths.length; i++) {
+        html += `
+          <i style="background:${colors[i]}; width:18px; height:18px; display:inline-block; margin-right:6px;"></i>
+          <span style="color:#7c7ca5;">${widths[i]} m</span><br>
+        `;
+      }
+      div.innerHTML = html;
+      div.style.backgroundColor = "white";
+      div.style.padding = "8px";
+      div.style.border = "1px solid #ccc";
+      div.style.borderRadius = "5px";
+      div.style.fontSize = "12px";
+      return div;
+    };
+    widthLegend.addTo(map);
+  }
+
+  // =================== PANEL FUNCTIONS =====================
+  function togglePanel(panelId) {
+    // Close all panels first
+    document.querySelectorAll(".dropdown-panel").forEach((panel) => {
+      panel.style.display = "none";
+    });
+
+    // Close dropdown menus
+    document.getElementById("corridorMenu").style.display = "none";
+    document.getElementById("routeTypeMenu").style.display = "none";
+
+    // Toggle the requested panel
+    const panel = document.getElementById(panelId);
+    if (panel.style.display === "block") {
+      panel.style.display = "none";
+    } else {
+      panel.style.display = "block";
+
+      // Special handling for destination panel
+      if (panelId === "destinationPanel") {
+        // Reset and initialize destination panel
+        document.getElementById("destinationType").value = "";
+        document.getElementById("destinationContent").innerHTML = "";
+      }
+    }
+  }
+
+  function closePanel(panelId) {
+    document.getElementById(panelId).style.display = "none";
+
+    if (panelId === "villagePanel") {
+      handleVillageDone();
+    } else if (panelId === "mandiPanel") {
+      handleMandiDone();
+    } else if (panelId === "destinationPanel") {
+      handleDestinationDone();
+    }
+  }
+
+  function resetPage() {
+    location.reload();
+  }
+
+  // =================== DROPDOWN MENU FUNCTIONS =====================
+  function toggleCorridorMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById("corridorMenu");
+    const isVisible = menu.style.display === "block";
+
+    // Close other menus and panels
+    document.getElementById("routeTypeMenu").style.display = "none";
+    document
+      .querySelectorAll(".dropdown-panel")
+      .forEach((p) => (p.style.display = "none"));
+
+    menu.style.display = isVisible ? "none" : "block";
+  }
+
+  function handleCorridor(type) {
+    if (selectedPoints.length < 2) {
+      alert("Please select at least 2 points to show corridor.");
+      return;
+    }
+    currentCorridorType = type;
+
+    // When corridor is selected, reset route type to none
+    currentRouteType = null;
+    intermediatePointsAdded = false;
+
+    updateSelectedInfo();
+    drawRoute();
+    document.getElementById("corridorMenu").style.display = "none";
+  }
+
+  function toggleRouteTypeMenu(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById("routeTypeMenu");
+    const isVisible = menu.style.display === "block";
+
+    // Close other menus and panels
+    document.getElementById("corridorMenu").style.display = "none";
+    document
+      .querySelectorAll(".dropdown-panel")
+      .forEach((p) => (p.style.display = "none"));
+
+    menu.style.display = isVisible ? "none" : "block";
+  }
+
+  function handleRouteType(type) {
+    console.log("Selected Route Type:", type);
+
+    if (type === "direct") {
+      // Restore original points for direct route
+      if (intermediatePointsAdded && originalPoints.length >= 2) {
+        selectedPoints = [...originalPoints];
+        intermediatePointsAdded = false;
+      }
+    } else {
+      // For intermediate routes, always start from original points
+      if (originalPoints.length >= 2) {
+        selectedPoints = [...originalPoints];
+        intermediatePointsAdded = false;
+      }
+    }
+
+    currentRouteType = type;
+    updateSelectedInfo();
+    drawRoute();
+    document.getElementById("routeTypeMenu").style.display = "none";
+  }
+
+  // =================== FILTER FUNCTIONS =====================
+  function filterVillageDistricts() {
+    const stateId = document.getElementById("villageState").value;
+    const districtSelect = document.getElementById("villageDistrict");
+
+    // Reset district selection
+    districtSelect.value = "";
+
+    // Filter districts by state
+    for (let option of districtSelect.options) {
+      if (option.value === "") continue;
+
+      if (stateId === "" || option.getAttribute("data-state") === stateId) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+
+    filterVillages();
+  }
+
+  function filterVillages() {
+    const districtId = document.getElementById("villageDistrict").value;
+    const villageSelect = document.getElementById("village");
+
+    // Reset village selection
+    villageSelect.value = "";
+
+    // Filter villages by district
+    for (let option of villageSelect.options) {
+      if (option.value === "") continue;
+
+      if (
+        districtId === "" ||
+        option.getAttribute("data-district") === districtId
+      ) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+  }
+
+  function filterMandiDistricts() {
+    const stateId = document.getElementById("mandiState").value;
+    const districtSelect = document.getElementById("mandiDistrict");
+
+    // Reset district selection
+    districtSelect.value = "";
+
+    // Filter districts by state
+    for (let option of districtSelect.options) {
+      if (option.value === "") continue;
+
+      if (stateId === "" || option.getAttribute("data-state") === stateId) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+
+    filterMandis();
+  }
+
+  function filterMandis() {
+    const districtId = document.getElementById("mandiDistrict").value;
+    const mandiSelect = document.getElementById("mandi");
+
+    // Reset mandi selection
+    mandiSelect.value = "";
+
+    // Filter mandis by district
+    for (let option of mandiSelect.options) {
+      if (option.value === "") continue;
+
+      if (
+        districtId === "" ||
+        option.getAttribute("data-district") === districtId
+      ) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+  }
+
+  // =================== DESTINATION PANEL FUNCTIONS =====================
+  function toggleDestinationType() {
+    const type = document.getElementById("destinationType").value;
+    const container = document.getElementById("destinationContent");
+    container.innerHTML = "";
+
+    if (type === "village") {
+      createDestinationVillagePanel();
+    } else if (type === "mandi") {
+      createDestinationMandiPanel();
+    }
+  }
+
+  function createDestinationVillagePanel() {
+    const container = document.getElementById("destinationContent");
+
+    // State dropdown
+    const stateDiv = document.createElement("div");
+    stateDiv.style.marginBottom = "15px";
+    stateDiv.innerHTML = `
+      <label style="color: #7c7ca5">State</label>
+      <select id="destVillageState">
+        <option value="">Select State</option>
+        {% for s in states %}
+        <option value="{{ s.id }}">{{ s.state_name }}</option>
+        {% endfor %}
+      </select>
+    `;
+    container.appendChild(stateDiv);
+
+    // District dropdown
+    const districtDiv = document.createElement("div");
+    districtDiv.style.marginBottom = "15px";
+    districtDiv.innerHTML = `
+      <label style="color: #7c7ca5">District</label>
+      <select id="destVillageDistrict">
+        <option value="">Select District</option>
+        {% for d in districts %}
+        <option value="{{ d.id }}" data-state="{{ d.state.id }}">{{ d.district_name }}</option>
+        {% endfor %}
+      </select>
+    `;
+    container.appendChild(districtDiv);
+
+    // Village dropdown
+    const villageDiv = document.createElement("div");
+    villageDiv.style.marginBottom = "15px";
+    villageDiv.innerHTML = `
+      <label style="color: #7c7ca5">Village</label>
+      <select id="destVillage">
+        <option value="">Select Village</option>
+        {% for v in villages %}
+        <option value="{{ v.id }}" data-district="{{ v.district.id }}" data-lat="{{ v.latitude }}" data-lng="{{ v.longitude }}">
+          {{ v.name }}
+        </option>
+        {% endfor %}
+      </select>
+    `;
+    container.appendChild(villageDiv);
+
+    // Add event listeners
+    const stateSelect = document.getElementById("destVillageState");
+    const districtSelect = document.getElementById("destVillageDistrict");
+
+    if (stateSelect) {
+      stateSelect.addEventListener("change", filterDestVillageDistricts);
+    }
+    if (districtSelect) {
+      districtSelect.addEventListener("change", filterDestVillages);
+    }
+
+    // Initialize filters
+    filterDestVillageDistricts();
+  }
+
+  function createDestinationMandiPanel() {
+    const container = document.getElementById("destinationContent");
+
+    // State dropdown
+    const stateDiv = document.createElement("div");
+    stateDiv.style.marginBottom = "15px";
+    stateDiv.innerHTML = `
+      <label style="color: #7c7ca5">State</label>
+      <select id="destMandiState">
+        <option value="">Select State</option>
+        {% for s in states %}
+        <option value="{{ s.id }}">{{ s.state_name }}</option>
+        {% endfor %}
+      </select>
+    `;
+    container.appendChild(stateDiv);
+
+    // District dropdown
+    const districtDiv = document.createElement("div");
+    districtDiv.style.marginBottom = "15px";
+    districtDiv.innerHTML = `
+      <label style="color: #7c7ca5">District</label>
+      <select id="destMandiDistrict">
+        <option value="">Select District</option>
+        {% for d in districts %}
+        <option value="{{ d.id }}" data-state="{{ d.state.id }}">{{ d.district_name }}</option>
+        {% endfor %}
+      </select>
+    `;
+    container.appendChild(districtDiv);
+
+    // Mandi dropdown
+    const mandiDiv = document.createElement("div");
+    mandiDiv.style.marginBottom = "15px";
+    mandiDiv.innerHTML = `
+      <label style="color: #7c7ca5">Mandi</label>
+      <select id="destMandi">
+        <option value="">Select Mandi</option>
+        {% for m in mandis %}
+        <option value="{{ m.id }}" data-district="{{ m.district.id }}" data-lat="{{ m.latitude }}" data-lng="{{ m.longitude }}">
+          {{ m.mandi_name }}
+        </option>
+        {% endfor %}
+      </select>
+    `;
+    container.appendChild(mandiDiv);
+
+    // Add event listeners
+    const stateSelect = document.getElementById("destMandiState");
+    const districtSelect = document.getElementById("destMandiDistrict");
+
+    if (stateSelect) {
+      stateSelect.addEventListener("change", filterDestMandiDistricts);
+    }
+    if (districtSelect) {
+      districtSelect.addEventListener("change", filterDestMandis);
+    }
+
+    // Initialize filters
+    filterDestMandiDistricts();
+  }
+
+  // Destination filters - VILLAGE
+  function filterDestVillageDistricts() {
+    const stateSelect = document.getElementById("destVillageState");
+    const districtSelect = document.getElementById("destVillageDistrict");
+
+    if (!stateSelect || !districtSelect) return;
+
+    const stateId = stateSelect.value;
+
+    // Reset district selection
+    districtSelect.value = "";
+
+    // Filter districts by state
+    for (let option of districtSelect.options) {
+      if (option.value === "") continue;
+
+      if (stateId === "" || option.getAttribute("data-state") === stateId) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+
+    filterDestVillages();
+  }
+
+  function filterDestVillages() {
+    const districtSelect = document.getElementById("destVillageDistrict");
+    const villageSelect = document.getElementById("destVillage");
+
+    if (!districtSelect || !villageSelect) return;
+
+    const districtId = districtSelect.value;
+
+    // Reset village selection
+    villageSelect.value = "";
+
+    // Filter villages by district
+    for (let option of villageSelect.options) {
+      if (option.value === "") continue;
+
+      if (
+        districtId === "" ||
+        option.getAttribute("data-district") === districtId
+      ) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+  }
+
+  // Destination filters - MANDI
+  function filterDestMandiDistricts() {
+    const stateSelect = document.getElementById("destMandiState");
+    const districtSelect = document.getElementById("destMandiDistrict");
+
+    if (!stateSelect || !districtSelect) return;
+
+    const stateId = stateSelect.value;
+
+    // Reset district selection
+    districtSelect.value = "";
+
+    // Filter districts by state
+    for (let option of districtSelect.options) {
+      if (option.value === "") continue;
+
+      if (stateId === "" || option.getAttribute("data-state") === stateId) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+
+    filterDestMandis();
+  }
+
+  function filterDestMandis() {
+    const districtSelect = document.getElementById("destMandiDistrict");
+    const mandiSelect = document.getElementById("destMandi");
+
+    if (!districtSelect || !mandiSelect) return;
+
+    const districtId = districtSelect.value;
+
+    // Reset mandi selection
+    mandiSelect.value = "";
+
+    // Filter mandis by district
+    for (let option of mandiSelect.options) {
+      if (option.value === "") continue;
+
+      if (
+        districtId === "" ||
+        option.getAttribute("data-district") === districtId
+      ) {
+        option.style.display = "block";
+      } else {
+        option.style.display = "none";
+      }
+    }
+  }
+
+  // =================== POINT MANAGEMENT =====================
+  function handleVillageDone() {
+    const villageSelect = document.getElementById("village");
+    const selectedOption = villageSelect.options[villageSelect.selectedIndex];
+
+    if (!selectedOption || !selectedOption.value) {
+      alert("Please select a village");
+      return;
+    }
+
+    const name = selectedOption.text;
+    const lat = parseFloat(selectedOption.getAttribute("data-lat"));
+    const lng = parseFloat(selectedOption.getAttribute("data-lng"));
+
+    if (isNaN(lat) || isNaN(lng)) {
+      alert("Invalid coordinates for selected village");
+      return;
+    }
+
+    addPoint("village", name, lat, lng);
+  }
+
+  function handleMandiDone() {
+    const mandiSelect = document.getElementById("mandi");
+    const selectedOption = mandiSelect.options[mandiSelect.selectedIndex];
+
+    if (!selectedOption || !selectedOption.value) {
+      alert("Please select a mandi");
+      return;
+    }
+
+    const name = selectedOption.text;
+    const lat = parseFloat(selectedOption.getAttribute("data-lat"));
+    const lng = parseFloat(selectedOption.getAttribute("data-lng"));
+
+    if (isNaN(lat) || isNaN(lng)) {
+      alert("Invalid coordinates for selected mandi");
+      return;
+    }
+
+    addPoint("mandi", name, lat, lng);
+  }
+
+  function handleDestinationDone() {
+    const type = document.getElementById("destinationType").value;
+
+    if (type === "village") {
+      const villageSelect = document.getElementById("destVillage");
+      if (!villageSelect) {
+        alert("Please select destination type first");
+        return;
+      }
+
+      const selectedOption = villageSelect.options[villageSelect.selectedIndex];
+      if (!selectedOption || !selectedOption.value) {
+        alert("Please select a village");
+        return;
+      }
+
+      const name = selectedOption.text;
+      const lat = parseFloat(selectedOption.getAttribute("data-lat"));
+      const lng = parseFloat(selectedOption.getAttribute("data-lng"));
+
+      if (isNaN(lat) || isNaN(lng)) {
+        alert("Invalid coordinates for selected village");
+        return;
+      }
+
+      addPoint("destination", name, lat, lng, true);
+    } else if (type === "mandi") {
+      const mandiSelect = document.getElementById("destMandi");
+      if (!mandiSelect) {
+        alert("Please select destination type first");
+        return;
+      }
+
+      const selectedOption = mandiSelect.options[mandiSelect.selectedIndex];
+      if (!selectedOption || !selectedOption.value) {
+        alert("Please select a mandi");
+        return;
+      }
+
+      const name = selectedOption.text;
+      const lat = parseFloat(selectedOption.getAttribute("data-lat"));
+      const lng = parseFloat(selectedOption.getAttribute("data-lng"));
+
+      if (isNaN(lat) || isNaN(lng)) {
+        alert("Invalid coordinates for selected mandi");
+        return;
+      }
+
+      addPoint("destination", name, lat, lng, false);
+    } else {
+      alert("Please select destination type");
+    }
+  }
+
+  function addPoint(type, name, lat, lng, isVillage = false, id = null) {
+    // Validation Logic
+    if (selectedPoints.length < 2) {
+      if (type === "destination") {
+        alert(
+          "First and second points must be from Village or Mandi, not Destination."
+        );
+        return;
+      }
+    } else {
+      if (type !== "destination") {
+        alert("Additional points can only be selected from Destination.");
+        return;
+      }
+    }
+
+    // When adding new points, reset route type to none and store original points
+    if (!intermediatePointsAdded) {
+      originalPoints = [...selectedPoints];
+    }
+    currentRouteType = null;
+    intermediatePointsAdded = false;
+
+    // Generate ID if not provided
+    const pointId =
+      id || `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Add point
+    selectedPoints.push({
+      type,
+      name,
+      lat,
+      lng,
+      isVillage,
+      id: pointId,
+    });
+
+    const marker = L.marker([lat, lng], {
+      icon: icons[type === "destination" ? "destination" : type],
+    })
+      .addTo(map)
+      .bindPopup(`${type.charAt(0).toUpperCase() + type.slice(1)}: ${name}`)
+      .openPopup();
+
+    setTimeout(() => {
+      marker.closePopup();
+    }, 5000);
+
+    updateSelectedInfo();
+    fitMapToSelectedPoints();
+  }
+
+  function fitMapToSelectedPoints() {
+    if (selectedPoints.length === 0) return;
+    if (selectedPoints.length === 1) {
+      const p = selectedPoints[0];
+      map.flyTo([p.lat, p.lng], 12, { animate: true });
+    } else {
+      const bounds = L.latLngBounds(selectedPoints.map((p) => [p.lat, p.lng]));
+      map.flyToBounds(bounds, { padding: [80, 80], maxZoom: 12 });
+    }
+  }
+
+  function updateSelectedInfo() {
+    let html = selectedPoints
+      .map((p, i) => `<b>Point ${i + 1} (${p.type}):</b> ${p.name}`)
+      .join(" &nbsp; | &nbsp; ");
+
+    // Separate display for Corridor Type and Route Type
+    const corridorTypes = ["local", "highway", "shortest"];
+    const routeTypes = ["direct", "village", "mandi"];
+
+    const corridorType = corridorTypes.includes(currentCorridorType)
+      ? currentCorridorType.charAt(0).toUpperCase() +
+        currentCorridorType.slice(1)
+      : "None";
+
+    const routeType = routeTypes.includes(currentRouteType)
+      ? currentRouteType.charAt(0).toUpperCase() + currentRouteType.slice(1)
+      : "None";
+
+    html += `<br><b>Corridor Type:</b> ${corridorType}`;
+    html += ` &nbsp; | &nbsp; <b>Route Type:</b> ${routeType}`;
+
+    document.querySelector(".selected-info").innerHTML =
+      html || "<strong>No points selected.</strong>";
+  }
+
+  // Function to find and add intermediate points to route
+  function addIntermediatePointsToRoute(routeType) {
+    if (!routeLayer || selectedPoints.length < 2) return;
+
+    // Store original points before adding intermediates
+    if (!intermediatePointsAdded) {
+      originalPoints = [...selectedPoints];
+    }
+
+    const coords = buildCoordsFromRouteLayer(routeLayer);
+    if (!coords || coords.length < 2) return;
+
+    const { villages, mandis } = collectPOIsFromSelects();
+    const pointsToCheck = routeType === "village" ? villages : mandis;
+    const threshold = 200; // meters
+
+    const intermediatePoints = [];
+    const usedPointIds = new Set();
+
+    // Add original point IDs to used set to avoid including them as intermediates
+    selectedPoints.forEach((point) => {
+      if (point.id) usedPointIds.add(point.id);
+    });
+
+    // Find points near the route (EXCLUDING the start and end points)
+    for (let point of pointsToCheck) {
+      // Skip if this point is already in the route or already used
+      if (usedPointIds.has(point.id)) continue;
+
+      // Skip if this is the start or end point
+      const isStartPoint =
+        point.name === selectedPoints[0].name &&
+        point.lat === selectedPoints[0].lat &&
+        point.lng === selectedPoints[0].lng;
+      const isEndPoint =
+        point.name === selectedPoints[selectedPoints.length - 1].name &&
+        point.lat === selectedPoints[selectedPoints.length - 1].lat &&
+        point.lng === selectedPoints[selectedPoints.length - 1].lng;
+
+      if (isStartPoint || isEndPoint) continue;
+
+      let minD = Infinity;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const A = coords[i],
+          B = coords[i + 1];
+        const d = pointToSegmentDistMeters(
+          point.lat,
+          point.lng,
+          A[1],
+          A[0],
+          B[1],
+          B[0]
+        );
+        if (d < minD) minD = d;
+        if (minD <= threshold) break;
+      }
+
+      if (minD <= threshold) {
+        intermediatePoints.push({
+          ...point,
+          type: routeType === "village" ? "village" : "mandi",
+          isVillage: routeType === "village",
+        });
+        usedPointIds.add(point.id); // Mark as used
+      }
+    }
+
+    // Remove duplicates based on coordinates and name
+    const uniqueIntermediatePoints = [];
+    const pointKeySet = new Set();
+
+    intermediatePoints.forEach((point) => {
+      const key = `${point.lat.toFixed(6)}_${point.lng.toFixed(6)}_${
+        point.name
+      }`;
+      if (!pointKeySet.has(key)) {
+        pointKeySet.add(key);
+        uniqueIntermediatePoints.push(point);
+      }
+    });
+
+    // Sort intermediate points by distance from start (simple approximation)
+    if (uniqueIntermediatePoints.length > 0) {
+      const start = selectedPoints[0];
+      uniqueIntermediatePoints.sort((a, b) => {
+        const distA = haversineMeters(start.lat, start.lng, a.lat, a.lng);
+        const distB = haversineMeters(start.lat, start.lng, b.lat, b.lng);
+        return distA - distB;
+      });
+
+      // Create new route with ONLY intermediate points between start and end
+      // Don't include the start and end points again as they're already in originalPoints
+      const newRoutePoints = [
+        selectedPoints[0], // Start point
+        ...uniqueIntermediatePoints, // Only intermediate points
+        selectedPoints[selectedPoints.length - 1], // End point
+      ];
+
+      selectedPoints = newRoutePoints;
+      intermediatePointsAdded = true;
+
+      // Update selected info to show all points
+      updateSelectedInfo();
+
+      return true;
+    }
+
+    return false;
+  }
+
+  // =================== ROUTING =====================
+  async function drawRoute() {
+    // Determine which type to use for routing - corridor takes priority
+    const routeTypeToUse = currentCorridorType || currentRouteType;
+
+    if (selectedPoints.length < 2 || !routeTypeToUse) return;
+
+    const spinner = document.getElementById("routeSpinner");
+    if (spinner) spinner.style.display = "block";
+
+    if (routeLayer) {
+      map.removeLayer(routeLayer);
+      routeLayer = null;
+    }
+
+    // Clear existing POI markers when drawing new route
+    poiLayer.clearLayers();
+    removePoILabel();
+
+    let coords = selectedPoints.map((p) => [p.lat, p.lng]);
+    let features = [];
+
+    try {
+      // Handle intermediate route types - always start from original corridor
+      if (currentRouteType === "village" || currentRouteType === "mandi") {
+        // First draw the corridor route to find nearby points
+        const corridorType = currentCorridorType || "shortest";
+
+        for (let i = 0; i < coords.length - 1; i++) {
+          const [aLat, aLng] = coords[i];
+          const [bLat, bLng] = coords[i + 1];
+          const res = await fetch(
+            `/route/?src_lat=${aLat}&src_lng=${aLng}&dst_lat=${bLat}&dst_lng=${bLng}&type=${corridorType}`
+          );
+          const data = await res.json();
+          if (data.features) features = features.concat(data.features);
+        }
+
+        if (features.length > 0) {
+          const routeData = { type: "FeatureCollection", features: features };
+          routeLayer = L.geoJSON(routeData, {
+            renderer: L.canvas(),
+            style: (feature) => ({
+              color:
+                feature.properties?.color ||
+                (corridorType === "local"
+                  ? "#27AE60"
+                  : corridorType === "highway"
+                  ? "#E74C3C"
+                  : "#2E86DE"),
+              weight: 4,
+              opacity: 0.8,
+            }),
+          }).addTo(map);
+
+          // Add intermediate points to the route
+          const pointsAdded = addIntermediatePointsToRoute(currentRouteType);
+
+          if (pointsAdded) {
+            // Now redraw the route with all points including intermediates
+            map.removeLayer(routeLayer);
+            routeLayer = null;
+            features = [];
+
+            // Use the updated selectedPoints that now includes intermediates
+            coords = selectedPoints.map((p) => [p.lat, p.lng]);
+
+            // Draw route segments between all consecutive points
+            for (let i = 0; i < coords.length - 1; i++) {
+              const [aLat, aLng] = coords[i];
+              const [bLat, bLng] = coords[i + 1];
+              const res = await fetch(
+                `/route/?src_lat=${aLat}&src_lng=${aLng}&dst_lat=${bLat}&dst_lng=${bLng}&type=${corridorType}`
+              );
+              const data = await res.json();
+              if (data.features) features = features.concat(data.features);
+            }
+          }
+        }
+      } else {
+        // For direct route or corridor-only, use the specified type
+        for (let i = 0; i < coords.length - 1; i++) {
+          const [aLat, aLng] = coords[i];
+          const [bLat, bLng] = coords[i + 1];
+          const res = await fetch(
+            `/route/?src_lat=${aLat}&src_lng=${aLng}&dst_lat=${bLat}&dst_lng=${bLng}&type=${routeTypeToUse}`
+          );
+          const data = await res.json();
+          if (data.features) features = features.concat(data.features);
+        }
+      }
+
+      // Draw the final route
+      if (features.length > 0) {
+        const routeData = { type: "FeatureCollection", features: features };
+
+        routeLayer = L.geoJSON(routeData, {
+          renderer: L.canvas(),
+          style: (feature) => ({
+            color:
+              feature.properties?.color ||
+              (routeTypeToUse === "local"
+                ? "#27AE60"
+                : routeTypeToUse === "highway"
+                ? "#E74C3C"
+                : "#2E86DE"),
+            weight: 4,
+            opacity: 0.8,
+          }),
+          onEachFeature: function (feature, layer) {
+            if (feature.geometry.type === "LineString") {
+              const width = feature.properties?.width || "N/A";
+              const costM = feature.properties?.cost_m
+                ? feature.properties.cost_m.toFixed(2)
+                : "N/A";
+              layer.bindTooltip(
+                `<b>Width:</b> ${width} m<br><b>Cost:</b> ${costM} m`
+              );
+            }
+          },
+        }).addTo(map);
+
+        map.fitBounds(routeLayer.getBounds());
+
+        // Show markers based on route type
+        if (currentRouteType === "direct") {
+          // For direct route, don't show any nearby markers
+          poiLayer.clearLayers();
+        } else if (currentRouteType === "village") {
+          // For intermediate village route, show only villages
+          showVillageMarkersNearRouteLayer(routeLayer, 200);
+        } else if (currentRouteType === "mandi") {
+          // For intermediate mandi route, show only mandis
+          showMandiMarkersNearRouteLayer(routeLayer, 200);
+        } else {
+          // For corridor types (when no specific route type selected), show both villages and mandis
+          showVillageMandiMarkersNearRouteLayer(routeLayer, 200);
+        }
+      }
+    } catch (e) {
+      console.error("Route fetch failed:", e);
+      alert("Failed to fetch route. Please try again.");
+    } finally {
+      if (spinner) spinner.style.display = "none";
+      updateSelectedInfo(); // Always update selected info after routing
+    }
+  }
+
+  // =================== DOWNLOAD PDF (Map + Route + All Points) =====================
+  async function downloadPDF() {
+    try {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+
+      // 1️⃣ Ensure map and routeLayer are rendered
+      if (window.map && map.invalidateSize) {
+        map.invalidateSize();
+      }
+      if (window.routeLayer && routeLayer.bringToFront) {
+        routeLayer.bringToFront();
+      }
+      await new Promise((r) => setTimeout(r, 800)); // slight delay for rendering
+
+      // Capture map (with route + markers)
+      const mapElement = document.getElementById("map");
+      const mapCanvas = await html2canvas(mapElement, {
+        useCORS: true,
+        logging: false,
+        scale: 2,
+        backgroundColor: null,
+      });
+      const mapImgData = mapCanvas.toDataURL("image/png");
+
+      // Add map image to PDF
+      const mapAspectRatio = mapCanvas.width / mapCanvas.height;
+      const mapWidth = pageWidth - 20;
+      const mapHeight = mapWidth / mapAspectRatio;
+      pdf.addImage(mapImgData, "PNG", 10, 10, mapWidth, mapHeight);
+
+      let y = 10 + mapHeight + 10;
+
+      // 2️⃣ Selected Points Overview
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(14);
+      pdf.text("Selected Points", 10, y);
+      y += 6;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(11);
+      selectedPoints.forEach((p, i) => {
+        pdf.text(`• Point ${i + 1} (${p.type}): ${p.name}`, 10, y);
+        y += 5;
+        pdf.text(`Lat: ${p.lat}, Lng: ${p.lng}`, 14, y);
+        y += 6;
+      });
+
+      // 3️⃣ Add Route Configuration Information
+      y += 5;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.text("Route Configuration", 10, y);
+      y += 6;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(11);
+
+      // Determine corridor type and route type
+      const corridorTypes = ["local", "highway", "shortest"];
+      const routeTypes = ["direct", "village", "mandi"];
+
+      const corridorType = corridorTypes.includes(currentCorridorType)
+        ? currentCorridorType.charAt(0).toUpperCase() +
+          currentCorridorType.slice(1)
+        : "None";
+
+      const routeType = routeTypes.includes(currentRouteType)
+        ? currentRouteType.charAt(0).toUpperCase() + currentRouteType.slice(1)
+        : "None";
+
+      pdf.text(`Corridor Type: ${corridorType}`, 10, y);
+      y += 5;
+      pdf.text(`Route Type: ${routeType}`, 10, y);
+      y += 10;
+
+      // 4️⃣ For each point (village, mandi, destination)
+      for (const point of selectedPoints) {
+        // Check if we need a new page
+        if (y > 250) {
+          pdf.addPage();
+          y = 20;
+        }
+
+        y += 5;
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(13);
+        pdf.text(
+          `${point.type.charAt(0).toUpperCase() + point.type.slice(1)} Details`,
+          10,
+          y
+        );
+        y += 6;
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(11);
+        pdf.text(`Name: ${point.name}`, 10, y);
+        y += 5;
+        pdf.text(`Coordinates: ${point.lat}, ${point.lng}`, 10, y);
+        y += 5;
+
+        // Add mandi/destination details
+        if (
+          point.type.toLowerCase() === "mandi" ||
+          point.type.toLowerCase() === "destination"
+        ) {
+          pdf.text(`Type: ${point.mandi_type || "N/A"}`, 10, y);
+          y += 5;
+          pdf.text(`District: ${point.district || "N/A"}`, 10, y);
+          y += 5;
+          pdf.text(`State: ${point.state || "N/A"}`, 10, y);
+          y += 5;
+        }
+
+        // Fetch and show product data for village OR destination-village
+        if (
+          point.type.toLowerCase() === "village" ||
+          (point.type.toLowerCase() === "destination" && point.isVillage)
+        ) {
+          try {
+            const response = await fetch(
+              `/api/submitted-products/?village=${encodeURIComponent(
+                point.name
+              )}`
+            );
+            const data = await response.json();
+
+            if (data.success && data.products?.length) {
+              y += 5;
+              pdf.setFont("helvetica", "bold");
+              pdf.text("Submitted Products", 10, y);
+              y += 4;
+
+              const tableData = data.products.map((p) => [
+                p.product_name,
+                p.product_type,
+                p.weight_kg,
+                p.harvest_month,
+                p.submission_date,
+              ]);
+
+              pdf.autoTable({
+                startY: y,
+                head: [
+                  [
+                    "Product Name",
+                    "Product Type",
+                    "Weight (kg)",
+                    "Harvest Month",
+                    "Submission Date",
+                  ],
+                ],
+                body: tableData,
+                theme: "grid",
+                styles: { fontSize: 10 },
+                headStyles: { fillColor: [240, 240, 240] },
+                margin: { left: 10, right: 10 },
+                pageBreak: "auto",
+                didDrawPage: function (data) {
+                  // Page header on each new page
+                  pdf.setFont("helvetica", "bold");
+                  pdf.setFontSize(12);
+                  pdf.text(`Village: ${point.name}`, 10, 10);
+                },
+              });
+
+              y = pdf.lastAutoTable.finalY + 6;
+            } else {
+              pdf.text(`No product data available for ${point.name}.`, 10, y);
+              y += 6;
+            }
+          } catch (err) {
+            console.error(`Failed to fetch products for ${point.name}:`, err);
+            pdf.text(`Error fetching product data for ${point.name}.`, 10, y);
+            y += 6;
+          }
+        }
+
+        // Page break if we near bottom
+        if (y > 270) {
+          pdf.addPage();
+          y = 20;
+        }
+      }
+
+      // 5️⃣ Save file
+      const pdfName = "Route_and_Points_Details.pdf";
+      pdf.save(pdfName);
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
+  }
+
+  // =================== INITIALIZATION =====================
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialize map
+    initMap();
+
+    // Set up event listeners for panel buttons
+    document
+      .getElementById("villageBtn")
+      .addEventListener("click", function (e) {
+        e.stopPropagation();
+        togglePanel("villagePanel");
+      });
+
+    document.getElementById("mandiBtn").addEventListener("click", function (e) {
+      e.stopPropagation();
+      togglePanel("mandiPanel");
+    });
+
+    document
+      .getElementById("destinationBtn")
+      .addEventListener("click", function (e) {
+        e.stopPropagation();
+        togglePanel("destinationPanel");
+      });
+
+    // Set up event listeners for filter dropdowns
+    document
+      .getElementById("villageState")
+      .addEventListener("change", filterVillageDistricts);
+    document
+      .getElementById("villageDistrict")
+      .addEventListener("change", filterVillages);
+    document
+      .getElementById("mandiState")
+      .addEventListener("change", filterMandiDistricts);
+    document
+      .getElementById("mandiDistrict")
+      .addEventListener("change", filterMandis);
+    document
+      .getElementById("destinationType")
+      .addEventListener("change", toggleDestinationType);
+
+    // Set up event listeners for dropdown menus
+    document
+      .getElementById("corridorBtn")
+      .addEventListener("click", toggleCorridorMenu);
+    document
+      .getElementById("routeTypeBtn")
+      .addEventListener("click", toggleRouteTypeMenu);
+
+    // Set up event listeners for menu items
+    document.querySelectorAll("#corridorMenu button").forEach((button) => {
+      button.addEventListener("click", function () {
+        handleCorridor(this.getAttribute("data-type"));
+      });
+    });
+
+    document.querySelectorAll("#routeTypeMenu button").forEach((button) => {
+      button.addEventListener("click", function () {
+        handleRouteType(this.getAttribute("data-type"));
+      });
+    });
+
+    // Close menus when clicking outside
+    document.addEventListener("click", function (event) {
+      // Close dropdown panels
+      document.querySelectorAll(".dropdown-panel").forEach((panel) => {
+        if (
+          !panel.contains(event.target) &&
+          !event.target.closest(".panel-wrapper")
+        ) {
+          panel.style.display = "none";
+        }
+      });
+
+      // Close dropdown menus
+      const corridorMenu = document.getElementById("corridorMenu");
+      const routeTypeMenu = document.getElementById("routeTypeMenu");
+
+      if (corridorMenu && !event.target.closest(".corridor-wrapper")) {
+        corridorMenu.style.display = "none";
+      }
+
+      if (routeTypeMenu && !event.target.closest(".route-type-wrapper")) {
+        routeTypeMenu.style.display = "none";
+      }
+    });
+
+    // Close on Escape key
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        document.querySelectorAll(".dropdown-panel").forEach((panel) => {
+          panel.style.display = "none";
+        });
+        document.getElementById("corridorMenu").style.display = "none";
+        document.getElementById("routeTypeMenu").style.display = "none";
+      }
+    });
+  });
+</script>
+
+{% endblock %}

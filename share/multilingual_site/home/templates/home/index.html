@@ -1,0 +1,39 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="UTF-8">
+    <title>{% trans "Multilingual Site" %}</title>
+</head>
+<body>
+    <h1>{{ welcome_message }}</h1>
+    <p>{{ choose_language }}</p>
+
+    <form action="/i18n/setlang/" method="post">
+        {% csrf_token %}
+        <select name="language">
+            {% get_current_language as LANGUAGE_CODE %}
+            {% get_available_languages as LANGUAGES %}
+            {% for lang, name in LANGUAGES %}
+                <option value="{{ lang }}"{% if lang == LANGUAGE_CODE %} selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+        <input type="submit" value="{% trans 'Switch' %}">
+    </form>
+
+    <hr>
+
+    <h2>{% trans "About this website" %}</h2>
+    <p>{% trans "This is a demo project to show how Django can support multiple languages like English, Hindi, and Punjabi." %}</p>
+
+    <h2>{% trans "Features" %}</h2>
+    <ul>
+        <li>{% trans "Language switcher with dropdown" %}</li>
+        <li>{% trans "Dynamic translations in templates and views" %}</li>
+        <li>{% trans "Easy to add new languages" %}</li>
+    </ul>
+
+    <h2>{% trans "Contact" %}</h2>
+    <p>{% trans "If you have any questions, feel free to contact the admin team." %}</p>
+</body>
+</html>

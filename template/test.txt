@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Home - India Village-Mandi Routing{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-wrap: wrap; gap: 25px;">
+
+    <!-- Block 1: Village Selection -->
+    <div style="flex: 1; min-width: 300px; background: #f1f3f9; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #4527a0;">Select Village</h2>
+        
+        <!-- State -->
+        <div style="margin-bottom: 15px;">
+            <label for="villageState" style="font-weight: 500;">State</label>
+            <select id="villageState" onchange="filterVillageDistricts()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="">Select State</option>
+                {% for s in village_states %}
+                    <option value="{{ s.id }}">{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- District -->
+        <div style="margin-bottom: 15px;">
+            <label for="villageDistrict" style="font-weight: 500;">District</label>
+            <select id="villageDistrict" onchange="filterVillages()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="">Select District</option>
+                {% for d in districts|dictsort:"name" %}
+                    <option value="{{ d.id }}" data-state="{{ d.state_id }}">{{ d.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Village -->
+        <div style="margin-bottom: 15px;">
+            <label for="village" style="font-weight: 500;">Village</label>
+            <select id="village" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="">Select Village</option>
+                {% for v in village|dictsort:"name" %}
+                    <option value="{{ v.id }}" data-district="{{ v.district_id }}">{{ v.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Block 2: Mandi Selection -->
+    <div style="flex: 1; min-width: 300px; background: #f1f3f9; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+        <h2 style="margin-top: 0; color: #4527a0;">Select Mandi</h2>
+        
+        <!-- State -->
+        <div style="margin-bottom: 15px;">
+            <label for="mandiState" style="font-weight: 500;">State</label>
+            <select id="mandiState" onchange="filterMandiDistricts()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="">Select State</option>
+                {% for s in states|dictsort:"name" %}
+                    <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- District -->
+        <div style="margin-bottom: 15px;">
+            <label for="mandiDistrict" style="font-weight: 500;">District</label>
+            <select id="mandiDistrict" onchange="filterMandis()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="">Select District</option>
+                {% for d in districts|dictsort:"name" %}
+                    <option value="{{ d.id }}" data-state="{{ d.state_id }}">{{ d.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Mandi -->
+        <div style="margin-bottom: 15px;">
+            <label for="mandi" style="font-weight: 500;">Mandi</label>
+            <select id="mandi" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                <option value="">Select Mandi</option>
+                {% for m in mandi|dictsort:"mandi_name" %}
+                    <option value="{{ m.id }}" data-district="{{ m.district_id }}">{{ m.mandi_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Village Filters
+function filterVillageDistricts() {
+    const stateId = document.getElementById("villageState").value;
+    const districtSelect = document.getElementById("villageDistrict");
+    districtSelect.value = '';
+    for(let i=0; i<districtSelect.options.length; i++){
+        let opt = districtSelect.options[i];
+        if(!opt.value) continue;
+        opt.style.display = (opt.dataset.state === stateId) ? 'block' : 'none';
+    }
+    filterVillages();
+}
+
+function filterVillages() {
+    const districtId = document.getElementById("villageDistrict").value;
+    const villageSelect = document.getElementById("village");
+    villageSelect.value = '';
+    for(let i=0; i<villageSelect.options.length; i++){
+        let opt = villageSelect.options[i];
+        if(!opt.value) continue;
+        opt.style.display = (opt.dataset.district === districtId) ? 'block' : 'none';
+    }
+}
+
+// Mandi Filters
+function filterMandiDistricts() {
+    const stateId = document.getElementById("mandiState").value;
+    const districtSelect = document.getElementById("mandiDistrict");
+    districtSelect.value = '';
+    for(let i=0; i<districtSelect.options.length; i++){
+        let opt = districtSelect.options[i];
+        if(!opt.value) continue;
+        opt.style.display = (opt.dataset.state === stateId) ? 'block' : 'none';
+    }
+    filterMandis();
+}
+
+function filterMandis() {
+    const districtId = document.getElementById("mandiDistrict").value;
+    const mandiSelect = document.getElementById("mandi");
+    mandiSelect.value = '';
+    for(let i=0; i<mandiSelect.options.length; i++){
+        let opt = mandiSelect.options[i];
+        if(!opt.value) continue;
+        opt.style.display = (opt.dataset.district === districtId) ? 'block' : 'none';
+    }
+}
+</script>
+{% endblock %}
+
+
+

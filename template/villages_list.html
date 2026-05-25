@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Village Map{% endblock %}
+
+{% block content %}
+<div style="max-width:2000px; margin-top:30px; position:relative;">
+
+    <!-- Search Section -->
+    <div style="width:550px; margin-bottom:20px; position:relative; display:flex; align-items:flex-start;">
+
+        <!-- Search Box (Left) -->
+        <div style="flex:1;">
+            <label for="villageSearch" style="font-weight:500; color:#7c7ca5; font-size:16px;">Search Village:</label>
+            <input type="text" id="villageSearch" placeholder="Start typing village name..." 
+                style="width:100%; padding:15px; border-radius:8px; border:1px solid #dcd6f0; font-size:16px;" autocomplete="off">
+        </div>
+
+        <!-- Suggestions (Right) -->
+        <div id="villageSuggestions" 
+            style="position:absolute; left:100%; top:0; width:250px; 
+                    max-height:600px; /* approx 10 items */ overflow-y:auto; 
+                    background:#e1f5fe; color:#3a3a55; 
+                    border:1px solid #dcd6f0; border-radius:6px; display:none; z-index:1000;">
+        </div>
+
+    </div>
+
+
+    <!-- Village Info -->
+    <div id="villageInfo" style="margin-top:30px; width:850px; display:none; line-height:1.6; background:#f8fdff; padding:25px; border-radius:12px; border:1px solid #e1f5fe;">
+        <div style="font-size:40px; font-weight:600; color:#2d2d4f; margin-bottom:15px;">
+            <span id="selectedVillageName"></span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+            <div style="font-size:20px; color:#3a3a55;">
+                <strong>District:</strong> <span id="villageDistrict"></span>
+            </div>
+            <div style="font-size:20px; color:#3a3a55;">
+                <strong>State:</strong> <span id="villageState"></span>
+            </div>
+            <div style="font-size:20px; color:#3a3a55;">
+                <strong>Coordinates:</strong> <span id="villageCoords"></span>
+            </div>
+            <div style="font-size:20px; color:#3a3a55;">
+                <strong>Total Products:</strong> <span id="totalProducts">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <div id="villageMap" 
+         style="height:400px; width:950px; border-radius:12px; border:2px solid #d1c4e9; display:none;
+                position:absolute; top:0; right:0; z-index:100; box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+    </div>
+
+    <!-- Submitted Products Table -->
+    <div id="productsSection" style="margin-top:200px; display:none;">
+        <h3 style="color:#7c7ca5; margin-bottom:20px;">Submitted Products for <span id="selectedVillage"></span></h3>
+        
+        <div style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <span style="font-weight:500; color:#7c7ca5;">Showing: </span>
+                <span id="productCount" style="color:#5d5d8a; font-style:italic;">0 products</span>
+            </div>
+            <div>
+                <label for="productTypeFilter" style="font-weight:500; color:#7c7ca5; margin-right:10px;">Filter by Type:</label>
+                <select id="productTypeFilter" style="padding:8px 12px; border-radius:6px; border:1px solid #dcd6f0;">
+                    <option value="">All Types</option>
+                    {% for attr in attribute_types %}
+                    <option value="{{ attr.name }}">{{ attr.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <table style="width:100%; border-collapse: collapse; margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.1); border-radius:8px; overflow:hidden;">
+            <thead>
+                <tr style="background:#e1f5fe;">
+                    <th style="padding:12px; border:1px solid #b3e5fc; text-align:left; font-weight:600; color:#2d2d4f;">Product Name</th>
+                    <th style="padding:12px; border:1px solid #b3e5fc; text-align:left; font-weight:600; color:#2d2d4f;">Product Type</th>
+                    <th style="padding:12px; border:1px solid #b3e5fc; text-align:left; font-weight:600; color:#2d2d4f;">Weight (kg)</th>
+                    <th style="padding:12px; border:1px solid #b3e5fc; text-align:left; font-weight:600; color:#2d2d4f;">Harvest Month</th>
+                    <th style="padding:12px; border:1px solid #b3e5fc; text-align:left; font-weight:600; color:#2d2d4f;">Submission Date</th>
+                </tr>
+            </thead>
+            <tbody id="productsTable">
+                <tr>
+                    <td colspan="5" style="padding:20px; text-align:center; color:#888; font-style:italic;">
+                        Select a village to view submitted products
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Summary Statistics -->
+        <div id="summarySection" style="display:none; background:#e8f5e8; padding:15px; border-radius:6px; margin-top:20px;">
+            <h4 style="margin:0 0 10px 0; color:#2d2d4f;">Summary</h4>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
+                <div style="text-align:center;">
+                    <div style="font-size:18px; font-weight:bold; color:#4caf50;" id="totalWeight">0</div>
+                    <div style="color:#3a3a55; font-size:14px;">Total Weight</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:18px; font-weight:bold; color:#2196f3;" id="uniqueProducts">0</div>
+                    <div style="color:#3a3a55; font-size:14px;">Unique Products</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:18px; font-weight:bold; color:#9c27b0;" id="productTypes">0</div>
+                    <div style="color:#3a3a55; font-size:14px;">Product Types</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:18px; font-weight:bold; color:#ff9800;" id="harvestMonths">0</div>
+                    <div style="color:#3a3a55; font-size:14px;">Harvest Months</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Leaflet JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+// Get Django context data
+const allVillages = [
+    {% for v in villages %}
+    {
+        name: "{{ v.name }}",
+        lat: parseFloat("{{ v.latitude }}"),
+        lng: parseFloat("{{ v.longitude }}"),
+        district: "{{ v.district.district_name|default:'N/A' }}",
+        state: "{{ v.district.state.state_name|default:'N/A' }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+const allAttributeTypes = [
+    {% for attr in attribute_types %}
+    "{{ attr.name }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+console.log("Villages data:", allVillages);
+console.log("Attribute types:", allAttributeTypes);
+
+const mapDiv = document.getElementById('villageMap');
+const villageInfoDiv = document.getElementById('villageInfo');
+const productsSection = document.getElementById('productsSection');
+const productsTable = document.getElementById('productsTable');
+const summarySection = document.getElementById('summarySection');
+const selectedVillageSpan = document.getElementById('selectedVillage');
+const villageDistrictSpan = document.getElementById('villageDistrict');
+const villageStateSpan = document.getElementById('villageState');
+const villageCoordsSpan = document.getElementById('villageCoords');
+const totalProductsSpan = document.getElementById('totalProducts');
+const selectedVillageNameSpan = document.getElementById('selectedVillageName');
+const productCountSpan = document.getElementById('productCount');
+
+// Summary elements
+const totalWeightSpan = document.getElementById('totalWeight');
+const uniqueProductsSpan = document.getElementById('uniqueProducts');
+const productTypesSpan = document.getElementById('productTypes');
+const harvestMonthsSpan = document.getElementById('harvestMonths');
+
+let map, marker;
+let currentVillage = '';
+let currentProducts = [];
+
+function showVillageOnMap(villageName) {
+    const village = allVillages.find(v => v.name === villageName);
+    
+    if(village) {
+        const lat = village.lat;
+        const lng = village.lng;
+        const district = village.district;
+        const state = village.state;
+
+        // Initialize map if not exists
+        if(!map) {
+            mapDiv.style.display = 'block';
+            map = L.map('villageMap', { 
+                zoomControl: true, 
+                attributionControl: false 
+            }).setView([lat, lng], 12);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Update marker
+        if(marker) map.removeLayer(marker);
+        
+        // Custom village marker
+        const villageIcon = L.divIcon({
+            html: `<div style="background:#4caf50; 
+                              color:white; 
+                              border-radius:50%; 
+                              width:40px; 
+                              height:40px; 
+                              display:flex; 
+                              align-items:center; 
+                              justify-content:center;
+                              font-size:18px;
+                              border:3px solid white;
+                              box-shadow:0 4px 12px rgba(76,175,80,0.3);">
+                      🏡
+                   </div>`,
+            className: 'village-marker',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+
+        marker = L.marker([lat, lng], { icon: villageIcon }).addTo(map);
+        map.setView([lat, lng], 12);
+
+        // Show village info
+        selectedVillageNameSpan.textContent = villageName;
+        villageDistrictSpan.textContent = district;
+        villageStateSpan.textContent = state;
+        villageCoordsSpan.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        villageInfoDiv.style.display = 'block';
+
+        currentVillage = villageName;
+        loadSubmittedProducts(villageName);
+    }
+}
+
+function loadSubmittedProducts(villageName) {
+    // Show loading state
+    productsTable.innerHTML = `
+        <tr>
+            <td colspan="5" style="padding:20px; text-align:center; color:#888; font-style:italic;">
+                Loading submitted products for ${villageName}...
+            </td>
+        </tr>
+    `;
+    
+    productsSection.style.display = 'block';
+    selectedVillageSpan.textContent = villageName;
+    summarySection.style.display = 'none';
+
+    // Make actual API call to get filtered data by village
+    fetch(`/api/submitted-products/?village=${encodeURIComponent(villageName)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySubmittedProducts(data);
+            } else {
+                showError(new Error(data.error || 'Failed to load products'));
+            }
+        })
+        .catch(error => {
+            console.error('Error loading submitted products:', error);
+            showError(error);
+        });
+}
+
+function displaySubmittedProducts(data) {
+    currentProducts = data.products || [];
+    
+    if (currentProducts.length > 0) {
+        renderProductsTable(currentProducts);
+        updateSummary(currentProducts);
+        totalProductsSpan.textContent = currentProducts.length;
+        productCountSpan.textContent = `${currentProducts.length} product(s)`;
+        summarySection.style.display = 'grid';
+    } else {
+        productsTable.innerHTML = `
+            <tr>
+                <td colspan="5" style="padding:20px; text-align:center; color:#888; font-style:italic;">
+                    No submitted products found for "${data.village.name}"<br>
+                    <small>Submit products using the product submission form to see data here.</small>
+                </td>
+            </tr>
+        `;
+        productCountSpan.textContent = '0 products';
+        totalProductsSpan.textContent = '0';
+        summarySection.style.display = 'none';
+    }
+}
+
+function renderProductsTable(products) {
+    productsTable.innerHTML = '';
+    
+    products.forEach(product => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="padding:12px; border:1px solid #b3e5fc;">${product.product_name}</td>
+            <td style="padding:12px; border:1px solid #b3e5fc;">
+                <span class="product-type-badge" style="background:#e1f5fe; color:#2196f3; padding:4px 8px; border-radius:12px; font-size:12px;">
+                    ${product.product_type}
+                </span>
+            </td>
+            <td style="padding:12px; border:1px solid #b3e5fc; font-weight:500; color:#4caf50;">${parseFloat(product.weight_kg).toLocaleString()} kg</td>
+            <td style="padding:12px; border:1px solid #b3e5fc;">
+                <span class="month-badge" style="background:#e8f5e8; color:#4caf50; padding:4px 8px; border-radius:12px; font-size:12px;">
+                    ${product.harvest_month}
+                </span>
+            </td>
+            <td style="padding:12px; border:1px solid #b3e5fc; color:#666;">${product.submission_date}</td>
+        `;
+        productsTable.appendChild(row);
+    });
+}
+
+function updateSummary(products) {
+    // Calculate total weight
+    const totalWeight = products.reduce((sum, product) => sum + parseFloat(product.weight_kg), 0);
+    
+    // Calculate unique products
+    const uniqueProducts = new Set(products.map(p => p.product_name)).size;
+    
+    // Calculate product types
+    const productTypes = new Set(products.map(p => p.product_type)).size;
+    
+    // Calculate harvest months
+    const harvestMonths = new Set(products.map(p => p.harvest_month)).size;
+    
+    totalWeightSpan.textContent = `${totalWeight.toLocaleString()} kg`;
+    uniqueProductsSpan.textContent = uniqueProducts;
+    productTypesSpan.textContent = productTypes;
+    harvestMonthsSpan.textContent = harvestMonths;
+}
+
+function filterProductsByType(type) {
+    if (!type) {
+        renderProductsTable(currentProducts);
+        updateSummary(currentProducts);
+        productCountSpan.textContent = `${currentProducts.length} product(s)`;
+        return;
+    }
+    
+    const filteredProducts = currentProducts.filter(product => product.product_type === type);
+    renderProductsTable(filteredProducts);
+    updateSummary(filteredProducts);
+    productCountSpan.textContent = `${filteredProducts.length} product(s)`;
+}
+
+function showError(error) {
+    productsTable.innerHTML = `
+        <tr>
+            <td colspan="5" style="padding:20px; text-align:center; color:#ff6b6b; font-style:italic;">
+                Error loading submitted products: ${error.message}
+            </td>
+        </tr>
+    `;
+    productCountSpan.textContent = '0 products';
+    summarySection.style.display = 'none';
+}
+
+// Event listeners
+const villageInput = document.getElementById('villageSearch');
+const suggestionsDiv = document.getElementById('villageSuggestions');
+
+// Show suggestions as user types
+villageInput.addEventListener('input', function() {
+    const query = this.value.toLowerCase().trim();
+    suggestionsDiv.innerHTML = '';
+
+    if (!query) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+
+    // Filter villages starting with query
+    const filteredVillages = allVillages
+        .filter(v => v.name.toLowerCase().startsWith(query))
+        .sort((a,b) => a.name.localeCompare(b.name)); // dictionary order
+
+    if (filteredVillages.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+
+    filteredVillages.forEach(v => {
+        const div = document.createElement('div');
+        div.textContent = v.name;
+        div.style.padding = '10px';
+        div.style.cursor = 'pointer';
+        div.style.borderBottom = '1px solid #f0f0f0';
+        div.addEventListener('click', () => {
+            villageInput.value = v.name;
+            suggestionsDiv.style.display = 'none';
+            showVillageOnMap(v.name);
+        });
+        suggestionsDiv.appendChild(div);
+    });
+
+    suggestionsDiv.style.display = 'block';
+});
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!villageInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+        suggestionsDiv.style.display = 'none';
+    }
+});
+
+// Optional: handle Enter key
+villageInput.addEventListener('keypress', function(e) {
+    if(e.key === 'Enter') {
+        e.preventDefault();
+        showVillageOnMap(this.value.trim());
+        suggestionsDiv.style.display = 'none';
+    }
+});
+
+document.getElementById('productTypeFilter').addEventListener('change', function() {
+    filterProductsByType(this.value);
+});
+
+// Initialize - show products section with placeholder
+document.addEventListener('DOMContentLoaded', function() {
+    productsSection.style.display = 'block';
+});
+</script>
+
+<style>
+    tr:nth-child(even) {
+        background: #f9f9f9;
+    }
+    
+    tr:hover {
+        background: #f0f8ff;
+    }
+    
+    .product-type-badge {
+        background: #e1f5fe;
+        color: #2196f3;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .month-badge {
+        background: #e8f5e8;
+        color: #4caf50;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}

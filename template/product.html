@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Product Entry Form</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: #f4f6f9;
+      padding: 40px;
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    form {
+      background: #8a74b8;
+      max-width: 650px;
+      margin: 0 auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    input, select {
+      width: 100%;
+      height: 45px;
+      padding: 8px 12px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    input[type="submit"], button {
+      margin-top: 15px;
+      height: 45px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    input[type="submit"]:hover, button:hover {
+      background-color: #0056b3;
+    }
+    .product-group {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+      background: #f9fafc;
+      position: relative;
+    }
+    .remove-btn {
+      background: #dc3545;
+      color: #fff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      height: 32px;
+    }
+    .remove-btn:hover {
+      background: #a71d2a;
+    }
+  </style>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+  <h2>Product Entry Form</h2>
+
+  <form id="productForm">
+    <!-- Village -->
+    <label for="villageSelect">Select Village:</label>
+    <select id="villageSelect" name="village_id" required>
+      <option value="">-- Select Village --</option>
+      {% for village in villages %}
+        <option value="{{ village.Village_ID }}">{{ village.name }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Season -->
+    <label for="season">Season (Harvesting Time):</label>
+    <select name="season" id="season" required>
+      <option value="">-- Select Season --</option>
+      <option value="Summer">Summer</option>
+      <option value="Winter">Winter</option>
+      <option value="Rainy">Rainy</option>
+      <option value="Spring">Spring</option>
+      <option value="Autumn">Autumn</option>
+    </select>
+
+    <!-- Products -->
+    <h3>Products</h3>
+    <div id="productContainer"></div>
+    <button type="button" id="addProductBtn">➕ Add Product</button>
+
+    <!-- Date -->
+    <label for="date">Date:</label>
+    <input type="date" name="date" id="date" required />
+
+    <input type="submit" value="Submit" />
+  </form>
+
+  <script>
+    const productContainer = document.getElementById("productContainer");
+    const addProductBtn = document.getElementById("addProductBtn");
+    const villageSelect = document.getElementById("villageSelect");
+
+    // Function to add a product group
+    function addProductGroup() {
+      const div = document.createElement("div");
+      div.className = "product-group";
+
+      div.innerHTML = `
+        <button type="button" class="remove-btn">❌</button>
+        <label>Product Name:</label>
+        <input type="text" name="productName" required pattern="^[A-Za-z\\s\\-]{2,}$" />
+
+        <label>Product Type:</label>
+        <select name="goodType" required>
+          <option value="">-- Select Type --</option>
+          <option value="Grains">Grains</option>
+          <option value="Vegetable">Vegetable</option>
+          <option value="Fruit">Fruit</option>
+          <option value="Berries">Berries</option>
+          <option value="Nuts">Nuts</option>
+        </select>
+
+        <label>Quantity (kg):</label>
+        <input type="number" name="quantity" min="1" step="0.01" required />
+      `;
+
+      div.querySelector(".remove-btn").addEventListener("click", () => {
+        if (document.querySelectorAll(".product-group").length > 1) {
+          div.remove();
+        } else {
+          Swal.fire({
+            icon: "warning",
+            title: "At least one product required",
+            confirmButtonColor: "#f6c23e"
+          });
+        }
+      });
+
+      productContainer.appendChild(div);
+    }
+
+    // Add first product group by default
+    addProductGroup();
+
+    // Add new product group
+    addProductBtn.addEventListener("click", addProductGroup);
+
+    // Form submission with SweetAlert2
+    document.getElementById("productForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      if (!villageSelect.value) {
+        Swal.fire({
+          icon: "warning",
+          title: "Invalid Village",
+          text: "Please select a valid village from the list.",
+          confirmButtonColor: "#f6c23e",
+        });
+        return;
+      }
+
+      const season = document.getElementById("season").value;
+      const date = document.getElementById("date").value;
+
+      const products = [];
+      document.querySelectorAll(".product-group").forEach((group) => {
+        products.push({
+          productName: group.querySelector('[name="productName"]').value,
+          goodType: group.querySelector('[name="goodType"]').value,
+          quantity: parseFloat(group.querySelector('[name="quantity"]').value)
+        });
+      });
+
+      let productHTML = "";
+      products.forEach((p, i) => {
+        productHTML += `
+          <b>Product ${i + 1}:</b> ${p.productName} <br>
+          <b>Type:</b> ${p.goodType} <br>
+          <b>Quantity:</b> ${p.quantity} kg <br><br>
+        `;
+      });
+
+      Swal.fire({
+        title: "Confirm Product Entry",
+        html: `
+          <b>Village:</b> ${villageSelect.options[villageSelect.selectedIndex].text} <br>
+          <b>Season:</b> ${season} <br>
+          <b>Date:</b> ${date} <br><br>
+          ${productHTML}
+        `,
+        icon: "info",
+        showCancelButton: true,
+        confirmButtonText: "Confirm",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#007bff",
+        cancelButtonColor: "#f6c23e",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const payload = {
+            village_id: villageSelect.value,
+            season: season,
+            date: date,
+            products: products,
+          };
+
+          fetch("http://127.0.0.1:8000/admin/routing/productentryform/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payload),
+          })
+            .then((res) => {
+              if (res.ok) {
+                Swal.fire({
+                  icon: "success",
+                  title: "Submitted!",
+                  text: "Product entry saved successfully.",
+                  confirmButtonColor: "#007bff",
+                });
+                document.getElementById("productForm").reset();
+                productContainer.innerHTML = "";
+                addProductGroup();
+              } else {
+                Swal.fire({
+                  icon: "error",
+                  title: "Error",
+                  text: "There was an error submitting the data.",
+                  confirmButtonColor: "#dc3545",
+                });
+              }
+            })
+            .catch((err) => {
+              console.error(err);
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Could not submit data.",
+                confirmButtonColor: "#dc3545",
+              });
+            });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

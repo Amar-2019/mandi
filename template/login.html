@@ -1,0 +1,56 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mandi Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="{% static 'css/login.css' %}">
+</head>
+
+<body>
+  <canvas id="bgCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;"></canvas>
+
+  <!-- Theme toggle button -->
+  <div id="themeButton" class="theme-toggle">☀️</div>
+
+  <div class="container">
+    <div class="form-side">
+      <div class="card">
+        {% if messages %}
+        <div class="popup" id="popup">
+          {% for message in messages %}
+          <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="logo">W</div>
+        <h1>Welcome</h1>
+        <p class="sub">Sign in with your credentials</p>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="field">
+            <input id="userId" name="userId" class="input" type="text" placeholder="User ID" required />
+          </div>
+          <div class="field">
+            <input id="password" name="password" class="input" type="password" placeholder="Password" required />
+            <span class="toggle-password" onclick="togglePassword()">🔒</span>
+          </div>
+          <button class="btn" type="submit">Sign in</button>
+        </form>
+      </div>
+    </div>
+    <div class="image-side" >
+    </div>
+  </div>
+
+  <!-- External JS -->
+  <script src="{% static 'js/login.js' %}"></script>
+</body>
+</html>

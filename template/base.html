@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}India Village-Mandi Routing{% endblock %}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- External CSS -->
+  <link rel="stylesheet" href="{% static 'css/base.css' %}">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo-container">
+      <a href="/dashboard">
+        <img src="{% static 'images/user-icon.png' %}" alt="User" style="width: 40px; height: 40px; margin-right: 12px;">
+      </a>
+      <h1>INDIA VILLAGE-MANDI ROUTING</h1>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:15px;">
+      <!-- Theme toggle button -->
+      <div id="themeButton" class="theme-toggle">☀️</div>
+
+      <!-- User flag with hover popup -->
+      <div class="user-flag-container">
+        <img src="{% static 'images/person.jpeg' %}" alt="Flag" class="flag-img" id="flagIcon">
+        <div class="user-popup" id="userPopup">
+          <div style="margin-bottom:10px; font-weight:600; color:var(--text);">
+            User ID: <span>{{ request.user.username }}</span>
+          </div>
+          <button type="button" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside>
+    <ul>
+      <li><a href="/dashboard"><img src="{% static 'images/home.png' %}" alt="">Home</a></li>
+      <li><a href="/villages_list"><img src="{% static 'images/village.png' %}" alt="">Village list</a></li>
+      <li><a href="/mandi_list"><img src="{% static 'images/mandi.png' %}" alt="">Mandi list</a></li>
+      <!-- <li><a href="/village"><img src="{% static 'images/village3.jpeg' %}" alt="">Village</a></li> -->
+      <!-- <li><a href="/mandi"><img src="{% static 'images/mandi2.jpeg' %}" alt="">Mandi</a></li> -->
+      <li><a href="/products"><img src="{% static 'images/product.png' %}" alt="">Product</a></li>
+      <li><a href="/vehicle"><img src="{% static 'images/truck.png' %}" alt="">Vehicle</a></li>
+    </ul>
+  </aside>
+
+  <!-- Main Content -->
+  <main>
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  <!-- Pass Django logout URL -->
+  <script>
+    const logoutUrl = "{% url 'login' %}";
+  </script>
+
+  <!-- External JS -->
+  <script src="{% static 'js/base.js' %}"></script>
+</body>
+</html>
