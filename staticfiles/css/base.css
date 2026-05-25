@@ -1,0 +1,174 @@
+/* ---------- LIGHT THEME (Default) ---------- */
+:root {
+  --bg1: #f8f3ed;
+  --bg2: #e8dfd3;
+  --header: linear-gradient(90deg, #a9745b, #d19c6d);
+  --sidebar: #f0e6da;
+  --sidebar-hover: #e2d1c3;
+  --border: rgba(180, 150, 120, 0.4);
+  --accent: #a9745b;
+  --accent2: #d19c6d;
+  --text: #3b2f2f;
+  --muted: #6e5c4f;
+  --popup-bg: #fff;
+}
+
+/* ---------- DARK THEME ---------- */
+[data-theme="dark"] {
+  --bg1: #404049;
+  --bg2: #62626b;
+  --header: linear-gradient(90deg, #3b302e, #635f5d);
+  --sidebar: #636369;
+  --sidebar-hover: #3b3b48;
+  --border: rgba(124, 116, 116, 0.1);
+  --accent: #d19c6d;
+  --accent2: #a9745b;
+  --text: #eaeaea;
+  --muted: #aaa;
+  --popup-bg: #2d2d38;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg1);
+  display: flex;
+  color: var(--text);
+}
+
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: var(--header);
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 25px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+
+header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+header .logo-container {
+  display: flex;
+  align-items: center;
+}
+
+/* Theme toggle button */
+.theme-toggle {
+  cursor: pointer;
+  font-size: 22px;
+  margin-left: 20px;
+  user-select: none;
+}
+
+aside {
+  position: fixed;
+  top: 70px;
+  left: 0;
+  width: 240px;
+  height: 100%;
+  background: var(--sidebar);
+  padding-top: 20px;
+  border-right: 1px solid var(--border);
+  box-shadow: 2px 0 6px rgba(0,0,0,0.05);
+}
+
+aside ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+aside li {
+  margin: 10px 0;
+}
+
+aside a {
+  display: flex;
+  align-items: center;
+  padding: 14px 22px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+aside a:hover {
+  background: var(--sidebar-hover);
+  color: var(--accent);
+  transform: scale(1.05);
+}
+
+aside a img {
+  width: 26px;
+  height: 26px;
+  margin-right: 12px;
+}
+
+main {
+  margin-top: 70px;
+  margin-left: 240px;
+  padding: 25px;
+  flex: 1;
+  font-size: 18px;
+}
+
+.user-flag-container {
+  position: relative;
+  display: inline-block;
+}
+
+.flag-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.flag-img:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.user-popup {
+  display: none;
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 200px;
+  background: var(--popup-bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border-radius: 8px;
+  padding: 15px;
+  z-index: 2000;
+}
+
+.user-popup button {
+  width: 100%;
+  padding: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.user-popup button:hover {
+  background: var(--accent2);
+}
